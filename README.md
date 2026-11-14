@@ -4,7 +4,8 @@
 
 The refined backend in `flamesim/backend` now reads the existing Supabase
 `public.nasa_experiment_records` table on startup using a **publishable**
-(anonymous, read-only) key. It fetches all pages, then rejects records with
+key. The source table allows anonymous SELECT and has no anonymous write
+policy. The backend fetches all pages, then rejects records with
 impossible input values and ignores impossible output cells. The original
 Supabase import has not been independently verified for safety use. Check
 `GET /api/health` or `GET /api/dataset` for the source, source row count,
