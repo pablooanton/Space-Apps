@@ -1,5 +1,36 @@
 # FlameSim
 
+## Supabase and the FastAPI backend
+
+The refined backend in `flamesim/backend` now reads the existing Supabase
+`public.nasa_experiment_records` table on startup using a **publishable**
+(anonymous, read-only) key. It fetches all pages, then rejects records with
+impossible input values and ignores impossible output cells. The original
+Supabase import has not been independently verified for safety use. Check
+`GET /api/health` or `GET /api/dataset` for the source, source row count,
+excluded rows, sanitized cells, and warnings. Predictions from this import
+are marked low confidence.
+
+Run from the repository root:
+
+```bash
+pip install -r flamesim/backend/requirements.txt
+uvicorn main:app --app-dir flamesim/backend
+```
+
+The backend uses the project's existing public Supabase URL and publishable
+key by default. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` to override
+them. Set `FLAMESIM_OFFLINE_SAMPLE=1` to use the bundled sample without a
+Supabase connection. If the live source cannot be read, startup fails rather
+than silently presenting sample data as live data. The shared Supabase dataset
+is read-only through the API; CSV uploads and sample reset are handled locally
+by the browser while that source is active.
+
+The static interface in `docs/index.html` still looks for the API at
+`http://localhost:8000` unless `window.FLAMESIM_API_BASE` is set before its
+application script runs. Publishing the GitHub files alone does not deploy
+the Python backend.
+
 La interfaz actual publicada en `docs/index.html` es el rediseño de la segunda aplicación aportada en el ZIP. Sus fuentes completas están en `flamesim/`. Abre `docs/index.html` directamente o ejecuta `npm run preview:refined`. Para regenerar el HTML autónomo, ejecuta `npm run build:refined`.
 
 La presentación conserva la paleta oscura original y utiliza todo el ancho de la pantalla, con gráficos en una sección independiente a ancho completo. Se conservan los motores de cálculo, el backend, los datos y las acciones originales. El controlador incorpora un redibujado de gráficos al cambiar el tamaño de su contenedor. `flamesim/frontend/presentation.js` solo adapta títulos y textos de presentación al idioma seleccionado. Las instrucciones inferiores describen también la primera versión React, conservada en el repositorio.
@@ -54,3 +85,4 @@ To read Supabase at startup, set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in the b
 - `POST /api/simulate` — JSON inputs using the seven `material_id`/`in_*` names; returns each `out_*` value with source, confidence, unit, and experiment references
 
 Saved comparisons use browser localStorage. They are not written to Supabase. The flammability zones, time profiles, sensor trigger, CO guide, and radar scores are illustrative visual models; the underlying CSV alone does not validate them as safety thresholds.
+
