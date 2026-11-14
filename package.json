@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "build:standalone": "node scripts/prepare-demo.mjs && vite build --mode standalone",
-    "demo": "vite --host 0.0.0.0 --mode standalone"
+    "demo": "vite --host 0.0.0.0 --mode standalone",
+    "build:refined": "node scripts/build-refined.mjs",
+    "preview:refined": "python3 -m http.server 4174 --bind 0.0.0.0 --directory flamesim/frontend"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.1.0",

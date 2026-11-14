@@ -1,0 +1,185 @@
+// ============================================================================
+// FlameSim: Client-Side Data Store & k-NN IDW Predictor Mirror
+// Mirrors backend/predict.py 1:1 so the app works seamlessly whether FastAPI
+// is running on localhost:8000 or running standalone in the browser.
+// ============================================================================
+
+export const SEEDED_SAMPLE_CSV = `record_id,document_id,material_id,in_o2_molar_fraction_pct,in_ventilation_flow_cm_s,in_material_thickness_mm,in_cabin_pressure_kpa,in_flow_direction,in_gravity_level_g,out_flame_spread_rate_mm_s,out_combustion_regime,out_flame_temperature_k,out_ignition_time_s,out_hrr_watts,out_hrr_kilowatts,out_fri_risk_index,out_verdict_1g_vs_ug,out_spread_rate_1g_ref_mm_s,out_safe_isolation_dist_mm,out_co_concentration_ppm,out_soot_generation_rate_mg_g,out_smoke_opacity_pct_m,out_acid_gas_hcl_ppm,out_acid_gas_hf_ppm,out_acid_gas_hcn_ppm,out_mean_particle_diameter_um,out_optimal_sensor_type,out_estimated_detection_time_s,out_recommended_mitigation,data_quality_flag,extraction_notes
+SAFFIRE-I-RUN01,NASA/TM-2017-219505,cotton,21.0,20.0,0.400,101.3,CONCURRENT,0.000001,3.65,STABLE_FLAME,1790.0,3.2,920.0,0.92,78,HIGHER_RISK_IN_UG,2.90,162.0,285.0,11.8,24.5,,,,0.82,PHOTOELECTRIC_LASER,7.4,"1. Shut off HVAC ventilation immediately; 2. Deploy Fine Water Mist PFE; 3. Scrub cabin CO.",SAMPLE_DATA,"Saffire-I large-scale SIBAL cotton/fiberglass concurrent spread in Cygnus OA-6."
+SAFFIRE-II-RUN04,NASA/TM-2018-219882,cotton,21.0,5.0,0.400,101.3,OPPOSED,0.000001,1.95,STABLE_FLAME,1680.0,4.1,510.0,,64,HIGHER_RISK_IN_UG,1.35,128.0,340.0,15.2,29.0,,,,0.94,PHOTOELECTRIC_LASER,11.2,"1. Cut ventilation flow to 0 cm/s; 2. Apply CO2 / Water Mist extinguisher.",SAMPLE_DATA,"Low-velocity opposed flow over thin cotton fabric in microgravity."
+BASS-COT-BLOW09,NASA/TM-2015-218710,cotton,19.5,46.0,0.500,101.3,CONCURRENT,0.000001,0.00,BLOW_OFF,780.0,4.8,0.0,0.00,18,LOWER_RISK_IN_UG,2.10,25.0,45.0,1.2,2.5,,,,0.41,PHOTOELECTRIC_LASER,6.0,"1. Flame extinguished by aerodynamic blow-off; 2. Monitor for residual smoldering.",SAMPLE_DATA,"High airflow Damkohler blow-off limit in microgravity duct."
+SAFFIRE-IV-RUN02,NASA/TM-2021-220688,pmma,26.5,15.0,2.000,82.0,CONCURRENT,0.000001,2.15,STABLE_FLAME,1820.0,9.5,790.0,0.79,71,HIGHER_RISK_IN_UG,1.68,152.0,195.0,18.4,31.2,,,,0.91,PHOTOELECTRIC_LASER,13.1,"1. Shut off HVAC ventilation; 2. Extinguish pyrolysis zone with CO2/Water; 3. Inspect HEPA filters.",SAMPLE_DATA,"Saffire-IV exploration atmosphere test over cast PMMA slab."
+FLEX-CFI-COOL01,NASA/CR-2016-219120,pmma,18.5,2.5,1.500,101.3,OPPOSED,0.000001,0.12,COOL_FLAME,605.0,11.0,,0.065,42,HIGHER_RISK_IN_UG,0.00,68.0,410.0,2.1,4.5,,,,0.34,GAS_CO_IR,19.5,"1. Cool Flame hazard (~605 K invisible): Do NOT increase O2 or airflow (risk of hot re-ignition); 2. Isolate thermal source.",SAMPLE_DATA,"Radiative quenching of hot flame transitioning to self-sustained Cool Flame (~600 K) in microgravity."
+SOFIE-QUENCH-01,NASA/TM-2023-SOFIE01,pmma,21.0,0.0,3.000,101.3,QUIESCENT,0.000001,0.00,SELF_EXTINCTION,490.0,14.2,18.0,0.018,24,LOWER_RISK_IN_UG,1.15,35.0,65.0,3.4,6.0,,,,0.74,PHOTOELECTRIC_LASER,28.0,"1. Keep ventilation off to ensure diffusive O2 starvation; 2. Verify cool-down with thermal IR camera.",SAMPLE_DATA,"Diffusive oxygen starvation spherical quenching in quiescent microgravity chamber."
+SOFIE-PMMA-THIN03,NASA/TM-2023-SOFIE04,pmma,34.0,12.0,1.000,56.5,CONCURRENT,0.000001,3.40,STABLE_FLAME,1890.0,5.4,980.0,0.98,84,HIGHER_RISK_IN_UG,2.60,175.0,230.0,22.0,38.0,,,,0.98,PHOTOELECTRIC_LASER,9.2,"1. Immediate HVAC shutoff in exploration atmosphere; 2. Deploy Fine Water Mist PFE; 3. Don PBA masks.",SAMPLE_DATA,"34% O2 at 56.5 kPa normoxic exploration atmosphere over thin PMMA."
+SAME-PVC-CABLE03,NASA/TM-2010-216351,pvc,23.0,10.0,1.200,101.3,CONCURRENT,0.000001,0.88,STABLE_FLAME,1510.0,6.8,340.0,0.34,69,HIGHER_RISK_IN_UG,0.42,112.0,420.0,44.5,68.0,46.5,15.8,2.4,1.15,PHOTOELECTRIC_LASER,10.2,"1. CRITICAL ACID GAS ALERT (HCl/HF > SMAC): Crew must don PBA breathing masks immediately; 2. Cut rack power and HVAC.",SAMPLE_DATA,"Halogenated PVC/Tefzel wire insulation combustion in microgravity (SAME/Toxicity)."
+STD6001-PVC-NOIG,NASA-STD-6001B-T1,pvc,19.0,5.0,2.000,101.3,OPPOSED,0.000001,0.00,NO_IGNITION,340.0,25.0,0.0,0.00,12,EQUIVALENT_RISK,0.00,20.0,15.0,0.4,0.8,2.1,0.8,0.0,0.28,IONIZATION,35.0,"1. Sub-LOI condition: No sustained ignition; 2. Maintain nominal ECLSS filtration.",SAMPLE_DATA,"Sub-limiting oxygen concentration test on thick PVC cable jacket."
+ORION-NOMEX-34O2,NASA/TM-2019-220210,nomex,34.0,18.0,1.000,56.5,CONCURRENT,0.000001,1.12,STABLE_FLAME,1690.0,5.1,410.0,0.41,66,HIGHER_RISK_IN_UG,0.85,120.0,260.0,14.2,26.0,0.0,0.0,19.8,0.88,PHOTOELECTRIC_LASER,8.9,"1. HCN TOXICITY ALERT (> 8 ppm SMAC): Crew don PBA masks; 2. Terminate cabin ventilation flow.",SAMPLE_DATA,"Orion exploration atmosphere (34% O2, 56.5 kPa) test on flame-retardant Nomex HT90-40."
+MAPTIS-NOMEX-ISS,NASA-STD-6001B-T1,nomex,21.0,10.0,1.500,101.3,CONCURRENT,0.000001,0.00,SELF_EXTINCTION,520.0,16.5,12.0,0.012,19,EQUIVALENT_RISK,0.00,30.0,40.0,1.8,3.2,0.0,0.0,3.5,0.62,PHOTOELECTRIC_LASER,24.0,"1. Self-extinguishing in nominal 21% O2 ISS cabin; 2. Verify char zone cooling.",SAMPLE_DATA,"Nominal ISS atmosphere test on Nomex fabric showing self-extinction after igniter removal."`;
+
+export const EXPECTED_COLUMNS = [
+  "record_id", "document_id", "material_id",
+  "in_o2_molar_fraction_pct", "in_ventilation_flow_cm_s", "in_material_thickness_mm",
+  "in_cabin_pressure_kpa", "in_flow_direction", "in_gravity_level_g",
+  "out_flame_spread_rate_mm_s", "out_combustion_regime", "out_flame_temperature_k",
+  "out_ignition_time_s", "out_hrr_watts", "out_hrr_kilowatts",
+  "out_fri_risk_index", "out_verdict_1g_vs_ug", "out_spread_rate_1g_ref_mm_s",
+  "out_safe_isolation_dist_mm", "out_co_concentration_ppm",
+  "out_soot_generation_rate_mg_g", "out_smoke_opacity_pct_m",
+  "out_acid_gas_hcl_ppm", "out_acid_gas_hf_ppm", "out_acid_gas_hcn_ppm",
+  "out_mean_particle_diameter_um", "out_optimal_sensor_type",
+  "out_estimated_detection_time_s", "out_recommended_mitigation"
+];
+
+const OPTIONAL_COLUMNS = ["data_quality_flag", "extraction_notes"];
+
+const NUMERIC_COLS = [
+  "in_o2_molar_fraction_pct", "in_ventilation_flow_cm_s", "in_material_thickness_mm",
+  "in_cabin_pressure_kpa", "in_gravity_level_g",
+  "out_flame_spread_rate_mm_s", "out_flame_temperature_k", "out_ignition_time_s",
+  "out_hrr_watts", "out_hrr_kilowatts", "out_fri_risk_index",
+  "out_spread_rate_1g_ref_mm_s", "out_safe_isolation_dist_mm",
+  "out_co_concentration_ppm", "out_soot_generation_rate_mg_g",
+  "out_smoke_opacity_pct_m", "out_acid_gas_hcl_ppm", "out_acid_gas_hf_ppm",
+  "out_acid_gas_hcn_ppm", "out_mean_particle_diameter_um", "out_estimated_detection_time_s"
+];
+
+export function parseFloatSafe(val) {
+  if (val === null || val === undefined) return null;
+  if (typeof val === "number") return Number.isNaN(val) ? null : val;
+  const s = String(val).trim();
+  if (!s || ["N/A", "NA", "NAN", "NULL", "NONE", "-", "--"].includes(s.toUpperCase())) return null;
+  const num = Number(s.replace(",", "."));
+  return Number.isNaN(num) ? null : num;
+}
+
+export function normalizeRegime(val) {
+  if (!val) return null;
+  const s = String(val).trim().toUpperCase();
+  if (!s || ["N/A", "NA", "NONE"].includes(s)) return null;
+  if (["COOL", "FRIA", "FRÍA", "LATENT", "600"].some(k => s.includes(k))) return "COOL_FLAME";
+  if (["BLOW", "SOPLADO"].some(k => s.includes(k))) return "BLOW_OFF";
+  if (["SELF", "QUENCH", "AUTOEXT", "STARV"].some(k => s.includes(k))) return "SELF_EXTINCTION";
+  if (["NO_IG", "NO IG", "SUB-LOI"].some(k => s.includes(k))) return "NO_IGNITION";
+  return "STABLE_FLAME";
+}
+
+export function normalizeFlowDir(val) {
+  const s = String(val || "").trim().toUpperCase();
+  if (s.includes("OPP") || s.includes("OPUESTO") || s.includes("CONTRA")) return "OPPOSED";
+  if (s.includes("QUIES") || s.includes("ESTANC") || s.includes("ZERO")) return "QUIESCENT";
+  return "CONCURRENT";
+}
+
+function splitCsvLine(line) {
+  const result = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (ch === "," && !inQuotes) {
+      result.push(cur);
+      cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  result.push(cur);
+  return result;
+}
+
+export function parseCsvDataset(csvText, isSample = false) {
+  const lines = csvText.trim().split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (lines.length === 0) return { row_count: 0, is_sample_data: false, missing_columns: EXPECTED_COLUMNS, unexpected_columns: [], warnings: [], rows: [] };
+
+  const headers = splitCsvLine(lines[0]).map(h => h.trim());
+  const missingColumns = EXPECTED_COLUMNS.filter(c => !headers.includes(c));
+  const unexpectedColumns = headers.filter(c => !EXPECTED_COLUMNS.includes(c) && !OPTIONAL_COLUMNS.includes(c));
+  const warnings = [];
+
+  if (missingColumns.length > 0) {
+    warnings.push({
+      row: 1,
+      record_id: "HEADER",
+      type: "MISSING_COLUMNS",
+      message: `Missing expected columns: ${missingColumns.join(", ")}`
+    });
+  }
+  if (unexpectedColumns.length > 0) {
+    warnings.push({
+      row: 1,
+      record_id: "HEADER",
+      type: "MISNAMED_OR_EXTRA_COLUMNS",
+      message: `Unrecognized/misnamed columns ignored: ${unexpectedColumns.join(", ")}`
+    });
+  }
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = splitCsvLine(lines[i]);
+    const raw = {};
+    headers.forEach((h, idx) => {
+      raw[h] = vals[idx] !== undefined ? vals[idx].trim() : "";
+    });
+
+    const recId = raw.record_id || `ROW-${i + 1}`;
+    const row = {
+      record_id: recId,
+      document_id: raw.document_id || "UNKNOWN-DOC",
+      material_id: (raw.material_id || "custom").toLowerCase(),
+      in_flow_direction: normalizeFlowDir(raw.in_flow_direction)
+    };
+
+    const rowMissing = [];
+    NUMERIC_COLS.forEach(col => {
+      const rv = raw[col];
+      const pv = parseFloatSafe(rv);
+      if (rv !== undefined && rv !== "" && pv === null) {
+        warnings.push({
+          row: i + 1,
+          record_id: recId,
+          type: "PARSE_WARNING",
+          message: `Invalid number in '${col}': '${rv}' (treated as missing)`
+        });
+      }
+      row[col] = pv;
+      if (pv === null && col.startsWith("out_")) rowMissing.push(col);
+    });
+
+    // Derive redundant W and kW (Columns N and O)
+    if (row.out_hrr_watts === null && row.out_hrr_kilowatts !== null) {
+      row.out_hrr_watts = Number((row.out_hrr_kilowatts * 1000).toFixed(2));
+    } else if (row.out_hrr_kilowatts === null && row.out_hrr_watts !== null) {
+      row.out_hrr_kilowatts = Number((row.out_hrr_watts / 1000).toFixed(4));
+    }
+
+    row.out_combustion_regime = normalizeRegime(raw.out_combustion_regime);
+    row.out_verdict_1g_vs_ug = raw.out_verdict_1g_vs_ug || null;
+    row.out_optimal_sensor_type = raw.out_optimal_sensor_type || null;
+    row.out_recommended_mitigation = raw.out_recommended_mitigation || null;
+    row.data_quality_flag = raw.data_quality_flag || "EXPERIMENTAL";
+    row.extraction_notes = raw.extraction_notes || "";
+
+    if (rowMissing.length > 0) {
+      warnings.push({
+        row: i + 1,
+        record_id: recId,
+        type: "MISSING_OUTPUT_CELLS",
+        message: `${rowMissing.length} empty output cells (${rowMissing.slice(0, 5).join(", ")}${rowMissing.length > 5 ? "..." : ""})`
+      });
+    }
+    rows.push(row);
+  }
+
+  const sampleDetected = isSample || rows.some(r => String(r.data_quality_flag).toUpperCase().includes("SAMPLE"));
+  return {
+    row_count: rows.length,
+    is_sample_data: sampleDetected,
+    missing_columns: missingColumns,
+    unexpected_columns: unexpectedColumns,
+    warnings,
+    rows
+  };
+}

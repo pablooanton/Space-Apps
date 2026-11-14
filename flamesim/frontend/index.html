@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en" class=""><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlameSim // NASA Space Apps 2026 · Spacecraft Fire Safety Telemetry</title>
+  
+  <link rel="stylesheet" href="./css/utilities.css"><link rel="stylesheet" href="./css/styles.css">
+<link rel="stylesheet" href="./css/professional.css"></head>
+<body class="text-slate-100 antialiased min-h-screen flex flex-col selection:bg-cyan-500 selection:text-slate-950">
+
+  <!-- ====================================================================== -->
+  <!-- TOP SAMPLE DATA WARNING RIBBON                                         -->
+  <!-- ====================================================================== -->
+  <div id="sample-warning-banner" class="bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-500/20 border-b border-amber-500/40 px-5 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+    <div class="flex items-center gap-2.5">
+      <span class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black tracking-wider text-[10px]">
+        TELEMETRY MODE: SAMPLE CSV
+      </span>
+      <span id="txt-sample-warning-title" class="font-bold text-amber-300">
+        SAMPLE DATA — NOT REAL FLIGHT CERTIFICATION EXPERIMENTS
+      </span>
+      <span id="txt-sample-warning-desc" class="text-slate-300 hidden xl:inline">
+        Running on seeded 11-row NASA PSI dataset. Upload your full experimental CSV in the Data tab.
+      </span>
+    </div>
+    <button onclick="window.switchMainTab('data')" class="px-3 py-0.5 rounded border border-amber-400/60 bg-amber-500/20 text-amber-200 hover:bg-amber-400 hover:text-slate-950 font-bold transition">
+      Upload Official CSV Dataset →
+    </button>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- MISSION CONTROL COMMAND HEADER                                         -->
+  <!-- ====================================================================== -->
+  <header class="bg-[#060b16]/90 backdrop-blur-xl border-b border-slate-800/90 px-5 py-3 sticky top-0 z-30 flex flex-col gap-3 shadow-2xl">
+    <div class="max-w-[1720px] w-full mx-auto flex flex-wrap items-center justify-between gap-4">
+
+      <!-- Brand & NASA Mission Emblem -->
+      <div class="flex items-center gap-3.5">
+        <div class="relative w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-700 to-slate-900 border border-cyan-400/50 flex items-center justify-center shadow-lg shadow-cyan-500/10">
+          <!-- Vectorial Orbit & Flame Emblem -->
+          <svg class="w-7 h-7 text-cyan-300" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 2" opacity="0.6"></circle>
+            <path d="M16 6C16 6 22 12.5 22 18C22 21.3137 19.3137 24 16 24C12.6863 24 10 21.3137 10 18C10 12.5 16 6 16 6Z" fill="url(#flameGrad)"></path>
+            <circle cx="16" cy="19" r="3" fill="#e0f2fe"></circle>
+            <defs>
+              <linearGradient id="flameGrad" x1="16" y1="6" x2="16" y2="24" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#f97316"></stop>
+                <stop offset="65%" stop-color="#38bdf8"></stop>
+                <stop offset="100%" stop-color="#1d4ed8"></stop>
+              </linearGradient>
+            </defs>
+          </svg>
+          <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 telemetry-dot border border-slate-950"></span>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <span class="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded bg-blue-500/15 text-cyan-300 border border-cyan-500/30 font-bold">
+              GRC // ISS · ORION · GATEWAY
+            </span>
+            <h1 id="txt-app-title" class="font-extrabold text-base md:text-lg tracking-tight text-white">
+              FlameSim: Spacecraft Fire Safety Simulator
+            </h1>
+          </div>
+          <p id="txt-model-badge" class="text-[11px] text-slate-400 font-mono mt-0.5">
+            Data-driven model v1 (interpolation on PSI/NASA experiments). Preliminary, not certified for flight decisions.
+          </p>
+        </div>
+      </div>
+
+      <!-- Center Navigation Console + Language + Engine Badge -->
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <nav class="flex items-center bg-[#040811] border border-slate-800 rounded-xl p-1 gap-1 text-xs font-mono shadow-inner">
+          <button id="nav-btn-simulator" onclick="window.switchMainTab('simulator')" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold shadow transition">
+            Simulator Console
+          </button>
+          <button id="nav-btn-data" onclick="window.switchMainTab('data')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">
+            PSI Dataset (<span id="nav-row-count" class="text-cyan-400">11</span>)
+          </button>
+          <button id="nav-btn-sweep" onclick="window.switchMainTab('sweep')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">
+            Parametric Sweep
+          </button>
+          <button id="nav-btn-compare" onclick="window.switchMainTab('compare')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">
+            Compare (<span id="nav-compare-count" class="text-cyan-400">0</span>/3)
+          </button>
+          <button id="nav-btn-about" onclick="window.switchMainTab('about')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">
+            Methodology
+          </button>
+        </nav>
+
+        <button id="btn-lang-toggle" onclick="window.toggleLanguage()" class="px-3 py-1.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 text-xs font-mono font-bold hover:bg-cyan-500/20 transition">
+          🌐 EN / ES
+        </button>
+
+        <span id="badge-api-mode" class="text-[10px] font-mono px-2.5 py-1.5 rounded-xl border border-cyan-500/30 bg-cyan-950/40 text-cyan-300 font-bold">
+          ENGINE: k-NN IDW
+        </span>
+      </div>
+    </div>
+
+    <!-- Second Sub-Bar: Mission Presets + Executive Export Controls -->
+    <div class="max-w-[1720px] w-full mx-auto flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/70 text-xs">
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <span id="txt-presets-title" class="font-mono text-[11px] uppercase tracking-wider text-slate-400 mr-1">
+          ⚡ Flight Environment Presets:
+        </span>
+        <button onclick="window.applyScenarioPreset('iss')" id="btn-preset-iss" class="px-2.5 py-1 rounded-lg border border-slate-700/80 bg-slate-900/90 hover:border-cyan-400 text-slate-200 font-mono text-[11px] transition">
+          🛰️ ISS Nominal (21% O₂, 101.3 kPa)
+        </button>
+        <button onclick="window.applyScenarioPreset('exploration')" id="btn-preset-exp" class="px-2.5 py-1 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 font-mono text-[11px] transition">
+          🚀 Orion Exploration (34% O₂, 56.5 kPa)
+        </button>
+        <button onclick="window.applyScenarioPreset('worst')" id="btn-preset-worst" class="px-2.5 py-1 rounded-lg border border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 font-mono text-[11px] transition">
+          🔥 Worst-Case O₂ Rich (40% O₂, 15 cm/s)
+        </button>
+        <button onclick="window.applyScenarioPreset('cool')" id="btn-preset-cool" class="px-2.5 py-1 rounded-lg border border-sky-500/40 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 font-mono text-[11px] transition">
+          ❄️ Cool Flame (~605 K Latent)
+        </button>
+        <button onclick="window.applyScenarioPreset('reset')" id="btn-preset-reset" class="px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-950 text-slate-400 hover:text-white font-mono text-[11px] transition">
+          ↺ Reset
+        </button>
+      </div>
+
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <button onclick="window.saveScenarioToCompare()" id="btn-save-compare" class="px-3 py-1 rounded-lg bg-indigo-500/15 border border-indigo-400/40 text-indigo-300 hover:bg-indigo-500/25 font-mono text-[11px] font-semibold transition">
+          + Pin to Compare (max 3)
+        </button>
+        <button onclick="window.exportPdfReport()" id="btn-export-pdf" class="px-3 py-1 rounded-lg bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-slate-950 font-mono font-bold text-[11px] shadow transition">
+          ⬇ Flight Safety PDF Report
+        </button>
+        <button onclick="window.exportCurrentJson()" id="btn-export-json" class="px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900 hover:border-cyan-400 font-mono text-[11px] transition">
+          JSON
+        </button>
+        <button onclick="window.exportDatasetCsv()" id="btn-export-csv" class="px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900 hover:border-cyan-400 font-mono text-[11px] transition">
+          CSV
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ====================================================================== -->
+  <!-- VIEW 1: SIMULATOR MISSION DASHBOARD                                    -->
+  <!-- ====================================================================== -->
+  <main id="view-simulator" class="flex-1 flex flex-col gap-4 p-4 max-w-[1720px] w-full mx-auto"><div class="workspace-intro"><div><h2>Simulation overview</h2><p>Define cabin conditions. Assess flame behavior, crew risk and response.</p></div><span>SPACECRAFT FIRE SAFETY<br>ANALYSIS WORKSPACE / 2026</span></div>
+
+    <!-- EXECUTIVE TELEMETRY SUMMARY RIBBON (INSTANT GLANCE FOR NASA ENGINEERS) -->
+    <section class="hud-panel hud-reticle rounded-2xl px-4 py-2.5 grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3 items-center executive-summary">
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+    <div class="flex flex-col border-r border-slate-800/80 pr-2">
+        <span class="text-[10px] font-mono uppercase text-slate-400">Fire Risk Index</span>
+        <span id="exec-fri" class="text-base font-mono font-black text-amber-400">71 / 100</span>
+      </div><div class="flex flex-col border-r border-slate-800/80 pr-2">
+        <span class="text-[10px] font-mono uppercase text-slate-400">Spread Rate V_f</span>
+        <span id="exec-vf" class="text-base font-mono font-black text-white">2.15 mm/s</span>
+      </div><div class="flex flex-col border-r border-slate-800/80 pr-2">
+        <span class="text-[10px] font-mono uppercase text-slate-400">Cabin CO Peak</span>
+        <span id="exec-co" class="text-base font-mono font-black text-purple-300">195 ppm</span>
+      </div><div class="flex flex-col border-r border-slate-800/80 pr-2">
+        <span class="text-[10px] font-mono uppercase text-slate-400">Predicted State</span>
+        <span id="exec-regime" class="text-xs font-mono font-extrabold text-orange-400 mt-0.5">STABLE_FLAME</span>
+      </div><div class="flex flex-col border-r border-slate-800/80 pr-2">
+        <span class="text-[10px] font-mono uppercase text-slate-400">Partial Pressure ppO₂</span>
+        <div class="flex items-baseline gap-1.5">
+          <span id="exec-ppo2" class="text-base font-mono font-black text-cyan-300">21.3 kPa</span>
+          <span id="exec-ppo2-psi" class="text-[10px] font-mono text-slate-400">(3.09 psia)</span>
+        </div>
+      </div><div class="flex flex-col border-r border-slate-800/80 pr-2">
+        <span class="text-[10px] font-mono uppercase text-slate-400">Thermal Biot Regime</span>
+        <span id="exec-biot" class="text-xs font-mono font-bold text-slate-200 mt-0.5">Intermediate Slab</span>
+      </div><div class="flex flex-col">
+        <span class="text-[10px] font-mono uppercase text-slate-400">Primary Detector Alarm</span>
+        <span id="exec-alarm" class="text-xs font-mono font-bold text-emerald-400 mt-0.5">Laser · 13.1 s</span>
+      </div></section>
+
+    <!-- MAIN 12-COLUMN WORKSPACE -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 simulation-workspace">
+
+      <!-- ================================================================== -->
+      <!-- LEFT SIDEBAR: SPACECRAFT CABIN & MATERIAL INPUTS (3 COLS)          -->
+      <!-- ================================================================== -->
+      <aside class="lg:col-span-3 flex flex-col gap-4">
+
+        <!-- Essential Parameters (1–4) -->
+        <section class="hud-panel hud-reticle rounded-2xl p-4 flex flex-col gap-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+              <h2 id="lbl-essential-title" class="text-xs font-mono uppercase tracking-wider font-bold text-cyan-300">
+                Essential Parameters
+              </h2>
+            </div>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">IN 01–04</span>
+          </div>
+
+          <!-- 1. Oxygen Mole Fraction (%) 15–50 -->
+          <div class="hud-subcard rounded-xl p-3 flex flex-col gap-1.5">
+            <div class="flex justify-between items-center">
+              <label for="num-o2" id="lbl-o2" class="text-xs font-semibold text-slate-200 cursor-help">
+                1. Oxygen Mole Fraction (O₂) ⓘ
+              </label>
+              <div class="flex items-center gap-1 bg-slate-900 border border-cyan-500/30 rounded-lg px-2 py-0.5">
+                <input id="num-o2" type="number" min="15" max="50" step="0.5" value="21.0" class="w-12 bg-transparent text-right text-xs font-mono font-bold text-cyan-300 focus:outline-none">
+                <span class="text-[10px] font-mono text-slate-400">%</span>
+              </div>
+            </div>
+            <input id="rng-o2" type="range" min="15" max="50" step="0.5" value="21.0" class="w-full cursor-pointer my-0.5">
+            <div class="flex justify-between text-[10px] font-mono text-slate-400">
+              <span>15% Hypoxic</span>
+              <span class="text-emerald-400">21% ISS</span>
+              <span class="text-amber-400">34% Orion</span>
+              <span class="text-rose-400">50% Max</span>
+            </div>
+          </div>
+
+          <!-- 2. Ventilation Flow Velocity (cm/s) 0–50 -->
+          <div class="hud-subcard rounded-xl p-3 flex flex-col gap-1.5">
+            <div class="flex justify-between items-center">
+              <label for="num-flow" id="lbl-flow" class="text-xs font-semibold text-slate-200 cursor-help">
+                2. Ventilation Flow Velocity ⓘ
+              </label>
+              <div class="flex items-center gap-1 bg-slate-900 border border-cyan-500/30 rounded-lg px-2 py-0.5">
+                <input id="num-flow" type="number" min="0" max="50" step="0.5" value="12.0" class="w-12 bg-transparent text-right text-xs font-mono font-bold text-cyan-300 focus:outline-none">
+                <span class="text-[10px] font-mono text-slate-400">cm/s</span>
+              </div>
+            </div>
+            <input id="rng-flow" type="range" min="0" max="50" step="0.5" value="12.0" class="w-full cursor-pointer my-0.5">
+            <div class="flex justify-between text-[10px] font-mono text-slate-400">
+              <span class="text-sky-400">0 Quiescent</span>
+              <span class="text-amber-400">5–20 µg Peak</span>
+              <span class="text-purple-400">50 Blow-off</span>
+            </div>
+          </div>
+
+          <!-- 3. Material Type -->
+          <div class="hud-subcard rounded-xl p-3 flex flex-col gap-1.5">
+            <div class="flex justify-between items-center">
+              <label for="sel-material" id="lbl-material" class="text-xs font-semibold text-slate-200 cursor-help">
+                3. Aerospace Material Type ⓘ
+              </label>
+              <span class="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300">MAPTIS / PSI</span>
+            </div>
+            <select id="sel-material" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs font-mono text-white focus:outline-none focus:border-cyan-400">
+              <option value="cotton">Cotton / SIBAL Fabric (Real Data)</option>
+              <option value="pmma" selected="">PMMA Cast Acrylic (Real Data)</option>
+              <option value="pvc">PVC / Tefzel Cable Insulation (Real Data)</option>
+              <option value="nomex">Nomex HT90-40 Flame Retardant (Real Data)</option>
+              <option value="custom">Custom (heuristic only, low confidence)</option>
+            </select>
+          </div>
+
+          <!-- 4. Material Thickness (mm) 0.05–10 -->
+          <div class="hud-subcard rounded-xl p-3 flex flex-col gap-1.5">
+            <div class="flex justify-between items-center">
+              <label for="num-thick" id="lbl-thick" class="text-xs font-semibold text-slate-200 cursor-help">
+                4. Material Thickness (δ) ⓘ
+              </label>
+              <div class="flex items-center gap-1 bg-slate-900 border border-cyan-500/30 rounded-lg px-2 py-0.5">
+                <input id="num-thick" type="number" min="0.05" max="10" step="0.05" value="1.5" class="w-12 bg-transparent text-right text-xs font-mono font-bold text-cyan-300 focus:outline-none">
+                <span class="text-[10px] font-mono text-slate-400">mm</span>
+              </div>
+            </div>
+            <input id="rng-thick" type="range" min="0.05" max="10" step="0.05" value="1.5" class="w-full cursor-pointer my-0.5">
+            <div class="flex justify-between text-[10px] font-mono text-slate-400">
+              <span>0.05 mm (Thin)</span>
+              <span>5.0 mm</span>
+              <span>10.0 mm (Thick Slab)</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Environment Parameters (5–7) -->
+        <section class="hud-panel hud-reticle rounded-2xl p-4 flex flex-col gap-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-orange-400"></span>
+              <h2 id="lbl-env-title" class="text-xs font-mono uppercase tracking-wider font-bold text-orange-300">
+                Spacecraft Cabin Environment
+              </h2>
+            </div>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">IN 05–07</span>
+          </div>
+
+          <!-- 5. Total Cabin Pressure (kPa) 20–150 -->
+          <div class="hud-subcard rounded-xl p-3 flex flex-col gap-1.5">
+            <div class="flex justify-between items-center">
+              <label for="num-press" id="lbl-press" class="text-xs font-semibold text-slate-200 cursor-help">
+                5. Total Cabin Pressure ⓘ
+              </label>
+              <div class="flex items-center gap-1 bg-slate-900 border border-orange-500/30 rounded-lg px-2 py-0.5">
+                <input id="num-press" type="number" min="20" max="150" step="0.5" value="101.3" class="w-14 bg-transparent text-right text-xs font-mono font-bold text-orange-300 focus:outline-none">
+                <span class="text-[10px] font-mono text-slate-400">kPa</span>
+              </div>
+            </div>
+            <input id="rng-press" type="range" min="20" max="150" step="0.5" value="101.3" class="w-full cursor-pointer my-0.5">
+            <div class="grid grid-cols-3 gap-1.5 pt-1">
+              <button type="button" onclick="window.setPressurePreset(101.3)" class="px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-400 text-[10px] font-mono transition">
+                ISS 101.3
+              </button>
+              <button type="button" onclick="window.setPressurePreset(56.5, 34.0)" class="px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 hover:border-amber-400 text-[10px] font-mono transition">
+                Expl. 56.5
+              </button>
+              <button type="button" onclick="window.setPressurePreset(29.6)" class="px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 hover:border-orange-400 text-[10px] font-mono transition">
+                EVA 29.6
+              </button>
+            </div>
+          </div>
+
+          <!-- 6. Flow Direction Relative to Flame -->
+          <div class="hud-subcard rounded-xl p-3 flex flex-col gap-2">
+            <label id="lbl-flow-dir" class="text-xs font-semibold text-slate-200 cursor-help">
+              6. Flow Direction vs. Flame ⓘ
+            </label>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button type="button" id="btn-dir-CONCURRENT" onclick="window.setFlowDir('CONCURRENT')" class="px-2 py-2 rounded-lg border border-cyan-400 bg-cyan-500/20 text-cyan-200 text-[11px] font-mono font-bold transition">
+                ⇉ Concurrent
+              </button>
+              <button type="button" id="btn-dir-OPPOSED" onclick="window.setFlowDir('OPPOSED')" class="px-2 py-2 rounded-lg border border-slate-700 bg-slate-900 text-slate-400 text-[11px] font-mono transition">
+                ⇄ Opposed
+              </button>
+              <button type="button" id="btn-dir-QUIESCENT" onclick="window.setFlowDir('QUIESCENT')" class="px-2 py-2 rounded-lg border border-slate-700 bg-slate-900 text-slate-400 text-[11px] font-mono transition">
+                ◎ Quiescent
+              </button>
+            </div>
+          </div>
+
+          <!-- 7. Gravity Level in g -->
+          <div class="hud-subcard rounded-xl p-3 flex flex-col gap-2">
+            <div class="flex justify-between items-center">
+              <label for="num-grav" id="lbl-gravity" class="text-xs font-semibold text-slate-200 cursor-help">
+                7. Gravity Level (g) ⓘ
+              </label>
+              <div class="flex items-center gap-1 bg-slate-900 border border-orange-500/30 rounded-lg px-2 py-0.5">
+                <input id="num-grav" type="number" min="0" max="2" step="0.01" value="0.0" class="w-12 bg-transparent text-right text-xs font-mono font-bold text-orange-300 focus:outline-none">
+                <span class="text-[10px] font-mono text-slate-400">g</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5">
+              <button type="button" onclick="window.setGravityPreset(0.0)" class="px-1.5 py-1.5 rounded-lg bg-orange-500/20 border border-orange-400 text-orange-200 text-[10px] font-mono font-bold">
+                0g (µg)
+              </button>
+              <button type="button" onclick="window.setGravityPreset(0.16)" class="px-1.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-orange-400 text-slate-300 text-[10px] font-mono">
+                0.16g Moon
+              </button>
+              <button type="button" onclick="window.setGravityPreset(0.38)" class="px-1.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-orange-400 text-slate-300 text-[10px] font-mono">
+                0.38g Mars
+              </button>
+              <button type="button" onclick="window.setGravityPreset(1.0)" class="px-1.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-orange-400 text-slate-300 text-[10px] font-mono">
+                1.0g Earth
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Optical / IR Combustion Chamber Live Visualizer -->
+        <section class="hud-panel hud-reticle rounded-2xl p-3.5 flex flex-col gap-2 flame-preview">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-cyan-300 font-bold flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-orange-500 telemetry-dot"></span>
+              Optical / IR Duct Chamber
+            </span>
+            <span id="hud-flame-shape-label" class="text-[10px] font-mono text-slate-400">Spherical / Advective µg</span>
+          </div>
+          <div class="relative rounded-xl overflow-hidden border border-slate-800 bg-[#03060c] h-36 w-full shadow-inner">
+            <canvas id="flameCanvas" class="w-full h-full block"></canvas>
+          </div>
+        </section>
+
+        <!-- Nearest 3 NASA PSI Experiments Used for Interpolation (Interactive Click-to-Select) -->
+        <section class="hud-panel hud-reticle rounded-2xl p-3.5 flex flex-col gap-2.5 border-cyan-500/40 nearest-panel">
+          <div class="flex items-center justify-between">
+            <h3 id="lbl-nearest-title" class="text-[11px] font-mono uppercase tracking-wider text-cyan-300 font-bold">
+              🎯 Best Matching DB Experiments (Click to Inspect)
+            </h3>
+            <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300">AI k-NN MATCH</span>
+          </div>
+          <p class="text-[10px] font-mono text-slate-400 leading-snug">
+            Ranked by similarity to your inputs. Click any NASA experiment below to lock &amp; display its exact database record:
+          </p>
+          <div id="nearest-experiments-list" class="flex flex-col gap-2 text-[11px] font-mono"></div>
+        </section>
+      </aside>
+
+      <!-- ================================================================== -->
+      <!-- RIGHT TELEMETRY DASHBOARD: 4 BLOCKS + 4 WINNER CHARTS (9 COLS)     -->
+      <!-- ================================================================== -->
+      <section class="lg:col-span-9 grid grid-cols-1 xl:grid-cols-2 gap-4 content-start">
+
+        <!-- ACTIVE SELECTED NASA DATABASE EXPERIMENT BANNER (SHOWS WHEN ENGINEER SELECTS A MATCH) -->
+        <div id="selected-db-experiment-banner" class="hidden xl:col-span-2 bg-gradient-to-r from-emerald-950/90 via-cyan-950/90 to-slate-900/95 border-2 border-emerald-400/70 rounded-2xl p-4 shadow-2xl flex flex-col gap-3">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-500/30 pb-2.5">
+            <div class="flex items-center gap-2.5">
+              <span class="px-2.5 py-1 rounded-lg bg-emerald-400 text-slate-950 font-mono font-black text-xs">
+                ✓ EXACT NASA DB RECORD ACTIVE
+              </span>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span id="sel-exp-banner-id" class="text-base font-mono font-black text-white">SAFFIRE-IV-RUN02</span>
+                  <span id="sel-exp-banner-doc" class="text-xs font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">NASA/TM-2021-220688</span>
+                  <span id="sel-exp-banner-match" class="text-xs font-mono font-bold text-emerald-300">98% Similarity Match</span>
+                </div>
+                <p id="sel-exp-banner-notes" class="text-xs text-slate-300 font-mono mt-0.5"></p>
+              </div>
+            </div>
+            <button type="button" onclick="window.exitSelectedExperimentMode()" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-emerald-400/50 text-emerald-300 text-xs font-mono font-bold transition">
+              ↺ Return to Free AI Interpolation Mode
+            </button>
+          </div>
+
+          <!-- Raw Database Row Inspector Strip -->
+          <div id="sel-exp-raw-db-strip" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 text-[11px] font-mono"></div>
+        </div>
+
+        <!-- CARD 1: FLAME DYNAMICS -->
+        <div class="hud-panel hud-reticle rounded-2xl p-4 flex flex-col gap-3.5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30 text-[10px] font-mono font-bold">02</span>
+              <h2 id="lbl-block2-title" class="text-xs font-mono uppercase tracking-wider font-bold text-white">
+                2. Risk &amp; Regulatory Assessment (NASA-STD-6001B)
+              </h2>
+            </div>
+            <span class="text-[10px] font-mono text-slate-500">COLS P–S</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div class="sm:col-span-7 hud-subcard rounded-xl p-3.5 flex items-center gap-4">
+              <div class="relative w-24 h-24 shrink-0 flex items-center justify-center">
+                <svg class="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" stroke="#1e293b" stroke-width="10" fill="none"></circle>
+                  <circle id="svg-fri-arc" cx="50" cy="50" r="40" stroke="#f97316" stroke-width="10" fill="none" stroke-dasharray="251.2" stroke-dashoffset="75" stroke-linecap="round" class="transition-all duration-300"></circle>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <span id="val-out-fri" class="text-2xl font-mono font-black text-white">71</span>
+                  <span class="text-[9px] font-mono text-slate-400">FRI 0–100</span>
+                </div>
+              </div>
+              <div class="flex flex-col gap-1 flex-1">
+                <div class="flex items-center justify-between">
+                  <span id="lbl-fri-title" class="text-xs font-bold text-slate-200 cursor-help">Fire Risk Index (FRI) ⓘ</span>
+                  <span id="badge-meta-fri"></span>
+                </div>
+                <span id="badge-fri-level" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded w-fit">
+                  ELEVATED RISK
+                </span>
+                <p class="text-[10px] font-mono text-slate-400">
+                  Pass (&lt;30) · Caution (30–55) · Elevated (56–75) · Critical (&gt;75)
+                </p>
+              </div>
+            </div>
+
+            <div class="sm:col-span-5 hud-subcard rounded-xl p-3.5 flex flex-col justify-between">
+              <div class="flex items-center justify-between gap-1">
+                <span id="lbl-safe-dist" class="text-xs text-slate-300 font-semibold cursor-help">Safe Isolation Dist. ⓘ</span>
+                <span id="badge-meta-safedist"></span>
+              </div>
+              <div class="my-1">
+                <span id="val-out-safedist" class="text-3xl font-mono font-black text-emerald-400">152</span>
+                <span class="text-xs font-mono text-slate-400 font-bold">mm</span>
+              </div>
+              <span class="text-[10px] font-mono text-slate-400">Minimum standoff (&lt; 10 kW/m²)</span>
+            </div>
+          </div>
+
+          <div class="hud-subcard rounded-xl p-3.5 flex flex-col gap-2.5">
+            <div class="flex items-center justify-between">
+              <span id="lbl-verdict-title" class="text-xs font-mono font-bold text-slate-200 cursor-help">
+                1g vs. µg Comparative Verdict ⓘ
+              </span>
+              <span id="badge-meta-verdict"></span>
+            </div>
+
+            <div id="box-verdict-banner" class="px-3 py-2 rounded-lg border text-xs font-mono font-bold"></div>
+
+            <div class="grid grid-cols-2 gap-3 pt-0.5">
+              <div class="p-3 rounded-xl bg-slate-900/95 border border-cyan-500/30 flex flex-col gap-1">
+                <span class="text-[10px] font-mono uppercase text-cyan-400 font-bold">Spacecraft / µg Prediction</span>
+                <div class="flex justify-between text-xs font-mono"><span class="text-slate-400">Spread V_f:</span><span id="cmp-ug-vf" class="font-bold text-white"></span></div>
+                <div class="flex justify-between text-xs font-mono"><span class="text-slate-400">Regime:</span><span id="cmp-ug-regime" class="font-bold text-cyan-300"></span></div>
+                <div class="flex justify-between text-xs font-mono"><span class="text-slate-400">FRI Score:</span><span id="cmp-ug-fri" class="font-bold text-amber-400"></span></div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-900/95 border border-slate-800 flex flex-col gap-1">
+                <span class="text-[10px] font-mono uppercase text-slate-400 font-bold">Earth 1g Reference</span>
+                <div class="flex justify-between text-xs font-mono"><span class="text-slate-400">Spread V_f:</span><span id="cmp-1g-vf" class="font-bold text-slate-200"></span></div>
+                <div class="flex justify-between text-xs font-mono"><span class="text-slate-400">Regime:</span><span id="cmp-1g-regime" class="font-bold text-slate-300"></span></div>
+                <div class="flex justify-between text-xs font-mono"><span class="text-slate-400">FRI Score:</span><span id="cmp-1g-fri" class="font-bold text-slate-300"></span></div>
+              </div>
+            </div>
+          </div>
+        </div><div class="hud-panel hud-reticle rounded-2xl p-4 flex flex-col gap-3.5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono font-bold">01</span>
+              <h2 id="lbl-block1-title" class="text-xs font-mono uppercase tracking-wider font-bold text-white">
+                1. Flame Dynamics &amp; Physical Behavior
+              </h2>
+            </div>
+            <span class="text-[10px] font-mono text-slate-500">COLS J–O</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div class="sm:col-span-5 hud-subcard rounded-xl p-3.5 flex flex-col justify-between">
+              <div class="flex items-center justify-between gap-1">
+                <span id="lbl-spread-rate" class="text-xs text-slate-300 font-semibold cursor-help">Flame Spread Rate (V_f) ⓘ</span>
+                <span id="badge-meta-vf"></span>
+              </div>
+              <div class="my-1.5 flex items-baseline gap-1.5">
+                <span id="val-out-vf" class="text-3xl font-mono font-black text-white tracking-tight">2.15</span>
+                <span class="text-xs font-mono text-cyan-400 font-bold">mm/s</span>
+              </div>
+              <div id="sub-vf-records" class="text-[10px] font-mono text-slate-400 truncate"></div>
+            </div>
+
+            <div class="sm:col-span-7 hud-subcard rounded-xl p-3.5 flex flex-col justify-between">
+              <div class="flex items-center justify-between gap-1">
+                <span id="lbl-regime" class="text-xs text-slate-300 font-semibold cursor-help">Combustion Regime ⓘ</span>
+                <span id="badge-meta-regime"></span>
+              </div>
+              <div class="my-1">
+                <span id="badge-regime-pill" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold border">
+                  STABLE FLAME
+                </span>
+              </div>
+              <p id="val-regime-desc" class="text-[11px] text-slate-300 leading-snug"></p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2.5">
+            <div class="hud-subcard rounded-xl p-3 flex flex-col justify-between">
+              <div class="flex justify-between items-start gap-1">
+                <span id="lbl-flame-temp" class="text-[11px] text-slate-400 cursor-help">Flame Temp ⓘ</span>
+                <span id="badge-meta-temp"></span>
+              </div>
+              <div class="mt-1.5">
+                <span id="val-out-temp" class="text-xl font-mono font-black text-orange-300">1820</span>
+                <span class="text-xs font-mono text-slate-400">K</span>
+              </div>
+            </div>
+
+            <div class="hud-subcard rounded-xl p-3 flex flex-col justify-between">
+              <div class="flex justify-between items-start gap-1">
+                <span id="lbl-ignition-time" class="text-[11px] text-slate-400 cursor-help">Ignition t_ig ⓘ</span>
+                <span id="badge-meta-tig"></span>
+              </div>
+              <div class="mt-1.5">
+                <span id="val-out-tig" class="text-xl font-mono font-black text-white">9.5</span>
+                <span class="text-xs font-mono text-slate-400">s</span>
+              </div>
+            </div>
+
+            <div class="hud-subcard rounded-xl p-3 flex flex-col justify-between">
+              <div class="flex justify-between items-start gap-1">
+                <span id="lbl-hrr" class="text-[11px] text-slate-400 cursor-help">HRR Power ⓘ</span>
+                <span id="badge-meta-hrr"></span>
+              </div>
+              <div class="mt-1.5">
+                <span id="val-out-hrr" class="text-xl font-mono font-black text-amber-400">790 W</span>
+                <div id="val-out-hrr-sub" class="text-[10px] font-mono text-slate-500">0.790 kW</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Compact Material Scatter Preview -->
+          <div class="hud-subcard rounded-xl p-3 flex flex-col gap-1.5">
+            <div class="flex items-center justify-between flex-wrap gap-1">
+              <h3 id="lbl-flam-map-title" class="text-[11px] font-mono font-bold text-slate-200">
+                Material Quick-Scatter: O₂ (%) vs. Flow Velocity (cm/s)
+              </h3>
+              <p id="lbl-flam-map-desc" class="text-[10px] text-slate-400">Selected material points + current input</p>
+            </div>
+            <div class="relative h-36 w-full">
+              <canvas id="flammabilityMapCanvas" class="w-full h-full block"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2: RISK AND REGULATORY ASSESSMENT -->
+        
+
+        <!-- CARD 3: CABIN EMISSIONS AND TOXICITY -->
+        <div class="hud-panel hud-reticle rounded-2xl p-4 flex flex-col gap-3.5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold">03</span>
+              <h2 id="lbl-block3-title" class="text-xs font-mono uppercase tracking-wider font-bold text-white">
+                3. Cabin Emissions &amp; Crew Toxicity (SMAC)
+              </h2>
+            </div>
+            <span class="text-[10px] font-mono text-slate-500">COLS T–Y</span>
+          </div>
+
+          <div class="hud-subcard rounded-xl p-3 flex flex-col gap-1.5">
+            <div class="flex items-center justify-between">
+              <span id="lbl-co" class="text-xs font-semibold text-slate-200 cursor-help">Carbon Monoxide (CO) ⓘ</span>
+              <div class="flex items-center gap-2">
+                <span id="val-out-co" class="text-lg font-mono font-black text-white">195 ppm</span>
+                <span id="badge-meta-co"></span>
+              </div>
+            </div>
+            <div class="w-full h-3 rounded-full bg-slate-900 border border-slate-700 overflow-hidden p-0.5">
+              <div id="bar-co-gauge" class="h-full rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500 transition-all duration-300" style="width: 45%"></div>
+            </div>
+            <div class="flex justify-between text-[10px] font-mono text-slate-400">
+              <span>0 ppm</span>
+              <span class="text-emerald-400">24h SMAC: 15 ppm</span>
+              <span class="text-amber-400">1h SMAC: 55 ppm</span>
+              <span class="text-rose-400">IDLH: 400+ ppm</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="hud-subcard rounded-xl p-3">
+              <div class="flex justify-between items-start gap-1">
+                <span id="lbl-soot" class="text-[11px] text-slate-400 cursor-help">Soot Generation ⓘ</span>
+                <span id="badge-meta-soot"></span>
+              </div>
+              <div class="mt-1">
+                <span id="val-out-soot" class="text-xl font-mono font-black text-white">18.4</span>
+                <span class="text-xs font-mono text-slate-400">mg/g</span>
+              </div>
+            </div>
+
+            <div class="hud-subcard rounded-xl p-3">
+              <div class="flex justify-between items-start gap-1">
+                <span id="lbl-opacity" class="text-[11px] text-slate-400 cursor-help">Smoke Opacity ⓘ</span>
+                <span id="badge-meta-opacity"></span>
+              </div>
+              <div class="mt-1">
+                <span id="val-out-opacity" class="text-xl font-mono font-black text-white">31.2</span>
+                <span class="text-xs font-mono text-slate-400">%/m</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hud-subcard rounded-xl p-3 flex flex-col gap-2">
+            <span id="lbl-acid-title" class="text-[11px] font-mono uppercase text-slate-400 cursor-help">
+              Critical Acid Gases (HCl, HF, HCN) ⓘ
+            </span>
+            <div class="grid grid-cols-3 gap-2.5">
+              <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
+                <div class="flex justify-between items-center"><span class="text-[11px] font-mono font-bold text-slate-300">HCl</span><span id="badge-meta-hcl"></span></div>
+                <div id="val-out-hcl" class="text-sm font-mono font-bold my-1">No data</div>
+                <span class="text-[9px] font-mono text-slate-500">SMAC 1h: 5 ppm</span>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
+                <div class="flex justify-between items-center"><span class="text-[11px] font-mono font-bold text-slate-300">HF</span><span id="badge-meta-hf"></span></div>
+                <div id="val-out-hf" class="text-sm font-mono font-bold my-1">No data</div>
+                <span class="text-[9px] font-mono text-slate-500">SMAC 1h: 2.5 ppm</span>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
+                <div class="flex justify-between items-center"><span class="text-[11px] font-mono font-bold text-slate-300">HCN</span><span id="badge-meta-hcn"></span></div>
+                <div id="val-out-hcn" class="text-sm font-mono font-bold my-1">No data</div>
+                <span class="text-[9px] font-mono text-slate-500">SMAC 1h: 8 ppm</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="box-crew-impact" class="px-3 py-2 rounded-lg border text-xs font-mono font-bold"></div>
+        </div>
+
+        <!-- CARD 4: SENSING AND EXTINGUISHING PROTOCOL -->
+        <div class="hud-panel hud-reticle rounded-2xl p-4 flex flex-col gap-3.5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold">04</span>
+              <h2 id="lbl-block4-title" class="text-xs font-mono uppercase tracking-wider font-bold text-white">
+                4. Sensing &amp; Extinguishing Protocol
+              </h2>
+            </div>
+            <span class="text-[10px] font-mono text-slate-500">COLS Z–AC</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="hud-subcard rounded-xl p-3">
+              <div class="flex justify-between items-start gap-1">
+                <span id="lbl-dp" class="text-[11px] text-slate-400 cursor-help">Particle Diameter (D_p) ⓘ</span>
+                <span id="badge-meta-dp"></span>
+              </div>
+              <div class="mt-1">
+                <span id="val-out-dp" class="text-2xl font-mono font-black text-emerald-400">0.91</span>
+                <span class="text-xs font-mono text-slate-400 font-bold">µm</span>
+              </div>
+              <span class="text-[10px] font-mono text-slate-500">Agglomerated µg aerosol</span>
+            </div>
+
+            <div class="hud-subcard rounded-xl p-3">
+              <div class="flex justify-between items-start gap-1">
+                <span id="lbl-sensor" class="text-[11px] text-slate-400 cursor-help">Optimal Sensor ⓘ</span>
+                <span id="badge-meta-sensor"></span>
+              </div>
+              <div id="val-out-sensor" class="text-xs font-mono font-bold text-cyan-300 mt-1">
+                PHOTOELECTRIC_LASER
+              </div>
+              <div class="text-xs font-mono text-slate-300 mt-0.5">
+                Est. Alarm: <span id="val-out-tdet" class="font-bold text-emerald-400">13.1 s</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hud-subcard rounded-xl p-3">
+            <span id="lbl-sensor-table-title" class="text-[10px] font-mono uppercase text-slate-400 font-bold">
+              Detector Technology Response Comparison
+            </span>
+            <table class="w-full text-left text-[11px] font-mono mt-1.5 border-collapse">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400">
+                  <th class="py-1">Sensor Technology</th>
+                  <th class="py-1">Target Size / Gas</th>
+                  <th class="py-1 text-right">Est. Time</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-sensor-comparison" class="divide-y divide-slate-900"></tbody>
+            </table>
+          </div>
+
+          <div class="bg-blue-950/35 border border-cyan-500/30 rounded-xl p-3 flex flex-col gap-1.5">
+            <div class="flex items-center justify-between">
+              <span id="lbl-mitigation-title" class="text-[11px] font-mono uppercase text-cyan-300 font-bold cursor-help">
+                ⚡ Recommended Mitigation Checklist (ISS Flight Rules) ⓘ
+              </span>
+              <span id="badge-meta-mitigation"></span>
+            </div>
+            <div id="list-mitigation-checklist" class="flex flex-col gap-1.5 text-xs font-mono text-slate-200 mt-1"></div>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- THE 4 WINNER ENGINEERING CHARTS SUITE (FULL WIDTH 2x2 GRID)      -->
+        <!-- ================================================================ -->
+        <div class="xl:col-span-2 hud-panel hud-reticle rounded-2xl p-5 flex flex-col gap-4 analysis-suite">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 telemetry-dot"></span>
+                <span class="text-[11px] font-mono uppercase tracking-widest text-cyan-300 font-bold">
+                  NASA PSI MICROGRAVITY ANALYTICS SUITE · 4 CORE ENGINEERING PLOTS
+                </span>
+              </div>
+              <h2 id="lbl-four-charts-heading" class="text-sm md:text-base font-extrabold text-white mt-0.5">
+                1. Regime Contour Map · 2. Thermocouple Space-Time Profile · 3. Cabin Toxicity &amp; Sensor Timeline · 4. Material Trade-Off Radar
+              </h2>
+            </div>
+            <span class="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300">
+              Interactive Telemetry · Coupled to Inputs
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+
+            <!-- CHART 1: 2D FLAMMABILITY REGIME CONTOUR MAP -->
+            <div class="hud-subcard rounded-xl p-4 flex flex-col gap-2.5 relative">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h3 id="lbl-c1-title" class="text-xs font-mono font-bold text-cyan-300">
+                    1. Flammability Regime Contour Map (U_g 0–40 cm/s vs. X_O₂ 15–40%)
+                  </h3>
+                  <p id="lbl-c1-sub" class="text-[10px] text-slate-400">
+                    Hover over white NASA experimental points to inspect mission ID &amp; optical/IR flame image. Click a point to load.
+                  </p>
+                </div>
+                <div class="flex items-center gap-2 text-[10px] font-mono">
+                  <span class="inline-flex items-center gap-1"><i class="w-2.5 h-2.5 rounded-sm bg-blue-700"></i>Blue: Quench</span>
+                  <span class="inline-flex items-center gap-1"><i class="w-2.5 h-2.5 rounded-sm bg-yellow-500"></i>Yellow: Cool Flame</span>
+                  <span class="inline-flex items-center gap-1"><i class="w-2.5 h-2.5 rounded-sm bg-red-600"></i>Red: Sustained</span>
+                </div>
+              </div>
+
+              <div class="relative h-64 w-full">
+                <canvas id="chart1ContourCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+
+                <!-- Floating NASA Experiment Photo Tooltip Card on Hover -->
+                <div id="chart1-hover-card" class="hidden absolute top-2 right-2 w-64 bg-slate-900/95 border border-cyan-400/70 rounded-xl p-2.5 shadow-2xl pointer-events-none z-20">
+                  <div class="flex items-center justify-between text-[10px] font-mono">
+                    <span id="hover-exp-id" class="font-bold text-amber-300">SAFFIRE-IV-RUN02</span>
+                    <span id="hover-exp-doc" class="text-cyan-400">NASA/TM-2021</span>
+                  </div>
+                  <img id="hover-exp-img" src="" alt="NASA Flame Telemetry" class="w-full h-24 object-cover rounded border border-slate-700 my-1.5">
+                  <div id="hover-exp-metrics" class="text-[10px] font-mono text-slate-200 leading-tight"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CHART 2: LONGITUDINAL FLAME PROFILE & SPACE-TIME DIAGRAM -->
+            <div class="hud-subcard rounded-xl p-4 flex flex-col gap-2.5">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h3 id="lbl-c2-title" class="text-xs font-mono font-bold text-orange-300">
+                    2. Longitudinal Thermocouple Space-Time Profile (0–120 s)
+                  </h3>
+                  <p id="lbl-c2-sub" class="text-[10px] text-slate-400">
+                    Left Y (Cyan): Flame front position (mm, slope = V_f) · Right Y (Orange): Max flame temp (K)
+                  </p>
+                </div>
+                <button type="button" id="btn-chart2-cut-hvac" class="px-3 py-1 rounded-lg bg-rose-500/20 border border-rose-500/50 text-rose-300 hover:bg-rose-500/30 text-xs font-mono font-bold transition">
+                  ✂ Simulate HVAC Ventilation Cut (t = 45s)
+                </button>
+              </div>
+
+              <div class="relative h-64 w-full">
+                <canvas id="chart2SpaceTimeCanvas" class="w-full h-full block"></canvas>
+              </div>
+            </div>
+
+            <!-- CHART 3: CABIN TOXICITY & SENSOR DETECTION TIME-SERIES -->
+            <div class="hud-subcard rounded-xl p-4 flex flex-col gap-2.5">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h3 id="lbl-c3-title" class="text-xs font-mono font-bold text-purple-300">
+                    3. Cabin Toxicity &amp; Sensor Detection Time-Series (0–120 s)
+                  </h3>
+                  <p id="lbl-c3-sub" class="text-[10px] text-slate-400">
+                    CO buildup (ppm) &amp; Smoke Opacity (%/m) vs. ISS Laser Alarm (Yellow dashed) &amp; NASA SMAC Limit (Red dashed)
+                  </p>
+                </div>
+                <div class="flex items-center gap-2 text-[10px] font-mono">
+                  <span class="text-purple-300">━ CO (ppm)</span>
+                  <span class="text-emerald-300">━ Smoke (%/m)</span>
+                </div>
+              </div>
+
+              <div class="relative h-64 w-full">
+                <canvas id="chart3ToxicityCanvas" class="w-full h-full block"></canvas>
+              </div>
+            </div>
+
+            <!-- CHART 4: RADAR (SPIDER) CHART OF MATERIAL TRADE-OFFS -->
+            <div class="hud-subcard rounded-xl p-4 flex flex-col gap-2.5">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h3 id="lbl-c4-title" class="text-xs font-mono font-bold text-emerald-300">
+                    4. Aerospace Material Trade-Off Radar (5-Axis Spider Chart)
+                  </h3>
+                  <p id="lbl-c4-sub" class="text-[10px] text-slate-400">
+                    Selected Material (Cyan solid) vs. ISS Standard Baseline (Amber dashed) across 5 safety dimensions
+                  </p>
+                </div>
+                <div class="flex items-center gap-1.5 text-[10px] font-mono">
+                  <span class="text-slate-400">ISS Baseline:</span>
+                  <select id="sel-chart4-baseline" class="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-amber-300 font-mono">
+                    <option value="nomex">Nomex HT90-40 (ISS Std)</option>
+                    <option value="cotton">SIBAL Cotton/Fiberglass</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="relative h-64 w-full">
+                <canvas id="chart4RadarCanvas" class="w-full h-full block"></canvas>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <!-- ====================================================================== -->
+  <!-- VIEW 2: DATA PAGE (CSV UPLOAD, WARNINGS, SEARCHABLE TABLE)             -->
+  <!-- ====================================================================== -->
+  <main id="view-data" class="hidden flex-1 p-5 max-w-[1720px] w-full mx-auto flex flex-col gap-4">
+    <div class="hud-panel hud-reticle rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h2 class="text-base font-bold text-white">NASA PSI Experimental Dataset Manager (29 Core Columns A–AC)</h2>
+        <p class="text-xs text-slate-400 font-mono mt-0.5">
+          Upload a new CSV exported from Google Sheets to hot-reload the interpolation model without restarting.
+        </p>
+      </div>
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <label class="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-mono font-bold cursor-pointer shadow transition">
+          📂 Upload New CSV File
+          <input id="inp-csv-file" type="file" accept=".csv" class="hidden" onchange="window.handleCsvFileUpload(event)">
+        </label>
+        <button onclick="window.resetToSampleDataset()" class="px-3.5 py-2 rounded-xl border border-slate-700 bg-slate-900 hover:border-slate-500 text-xs font-mono transition">
+          Reset to Seeded Sample CSV
+        </button>
+      </div>
+    </div>
+
+    <div id="box-dataset-warnings" class="hud-panel rounded-2xl p-4 flex flex-col gap-2"></div>
+
+    <div class="hud-panel rounded-2xl p-4 flex flex-col gap-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <input id="inp-data-search" type="text" placeholder="Search record_id, document_id, regime..." oninput="window.renderDataPageTable()" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-mono w-64">
+          <select id="sel-data-mat-filter" onchange="window.renderDataPageTable()" class="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono">
+            <option value="">All Materials</option>
+            <option value="cotton">cotton</option>
+            <option value="pmma">pmma</option>
+            <option value="pvc">pvc</option>
+            <option value="nomex">nomex</option>
+          </select>
+        </div>
+        <span id="txt-data-summary-count" class="text-xs font-mono text-cyan-400"></span>
+      </div>
+
+      <div class="overflow-x-auto border border-slate-800 rounded-xl max-h-[520px] custom-scroll">
+        <table class="w-full text-left text-xs font-mono whitespace-nowrap border-collapse">
+          <thead class="bg-slate-950 text-slate-400 sticky top-0">
+            <tr>
+              <th class="p-2.5 border-b border-slate-800">record_id</th>
+              <th class="p-2.5 border-b border-slate-800">document_id</th>
+              <th class="p-2.5 border-b border-slate-800">material</th>
+              <th class="p-2.5 border-b border-slate-800">O₂ (%)</th>
+              <th class="p-2.5 border-b border-slate-800">Flow (cm/s)</th>
+              <th class="p-2.5 border-b border-slate-800">Thick (mm)</th>
+              <th class="p-2.5 border-b border-slate-800">Press (kPa)</th>
+              <th class="p-2.5 border-b border-slate-800">Dir</th>
+              <th class="p-2.5 border-b border-slate-800">Grav (g)</th>
+              <th class="p-2.5 border-b border-slate-800 text-cyan-300">V_f (mm/s)</th>
+              <th class="p-2.5 border-b border-slate-800 text-cyan-300">Regime</th>
+              <th class="p-2.5 border-b border-slate-800">Temp (K)</th>
+              <th class="p-2.5 border-b border-slate-800">HRR (W | kW)</th>
+              <th class="p-2.5 border-b border-slate-800 text-rose-300">FRI</th>
+              <th class="p-2.5 border-b border-slate-800">CO (ppm)</th>
+              <th class="p-2.5 border-b border-slate-800">HCl | HF | HCN</th>
+              <th class="p-2.5 border-b border-slate-800">D_p (µm)</th>
+              <th class="p-2.5 border-b border-slate-800">Load</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-dataset-rows" class="divide-y divide-slate-800/70"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- ====================================================================== -->
+  <!-- VIEW 3: PARAMETER SWEEP                                                -->
+  <!-- ====================================================================== -->
+  <main id="view-sweep" class="hidden flex-1 p-5 max-w-[1400px] w-full mx-auto flex flex-col gap-4">
+    <div class="hud-panel hud-reticle rounded-2xl p-5 flex flex-col gap-4">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-base font-bold text-white">1D Parameter Sweep &amp; Sensitivity Analyzer</h2>
+          <p class="text-xs text-slate-400 font-mono">
+            Sweep one input parameter across its operational domain and plot the predicted output response curve.
+          </p>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap text-xs font-mono">
+          <div>
+            <label class="text-slate-400 block mb-1">X-Axis Input Variable:</label>
+            <select id="sel-sweep-x" onchange="window.runParameterSweep()" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5">
+              <option value="in_o2_molar_fraction_pct">Oxygen Mole Fraction O₂ (15–50%)</option>
+              <option value="in_ventilation_flow_cm_s">Ventilation Flow Velocity (0–50 cm/s)</option>
+              <option value="in_material_thickness_mm">Material Thickness (0.1–10 mm)</option>
+              <option value="in_cabin_pressure_kpa">Total Cabin Pressure (20–150 kPa)</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-slate-400 block mb-1">Y-Axis Output Variable:</label>
+            <select id="sel-sweep-y" onchange="window.runParameterSweep()" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-cyan-300">
+              <option value="out_flame_spread_rate_mm_s">Flame Spread Rate V_f (mm/s)</option>
+              <option value="out_fri_risk_index">Fire Risk Index FRI (0–100)</option>
+              <option value="out_flame_temperature_k">Flame Temperature (K)</option>
+              <option value="out_hrr_watts">Heat Release Rate HRR (W)</option>
+              <option value="out_co_concentration_ppm">CO Concentration (ppm)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud-subcard rounded-xl p-4 h-80 relative">
+        <canvas id="sweepChartCanvas" class="w-full h-full block"></canvas>
+      </div>
+    </div>
+  </main>
+
+  <!-- ====================================================================== -->
+  <!-- VIEW 4: COMPARE MODE                                                   -->
+  <!-- ====================================================================== -->
+  <main id="view-compare" class="hidden flex-1 p-5 max-w-[1500px] w-full mx-auto flex flex-col gap-4">
+    <div class="hud-panel hud-reticle rounded-2xl p-5 flex items-center justify-between">
+      <div>
+        <h2 class="text-base font-bold text-white">Scenario Comparison Matrix (localStorage · Max 3)</h2>
+        <p class="text-xs text-slate-400 font-mono">
+          Compare up to 3 saved spacecraft cabin configurations side by side.
+        </p>
+      </div>
+      <button onclick="window.clearSavedComparisons()" class="px-3 py-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 text-rose-300 text-xs font-mono">
+        Clear Saved Scenarios
+      </button>
+    </div>
+    <div id="grid-compare-cards" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+  </main>
+
+  <!-- ====================================================================== -->
+  <!-- VIEW 5: ABOUT / DATA & METHODOLOGY                                     -->
+  <!-- ====================================================================== -->
+  <main id="view-about" class="hidden flex-1 p-5 max-w-[1100px] w-full mx-auto flex flex-col gap-4">
+    <div class="hud-panel hud-reticle rounded-2xl p-6 space-y-4 leading-relaxed text-sm text-slate-300">
+      <h2 class="text-lg font-bold text-cyan-400 font-mono">
+        About FlameSim · NASA PSI Data &amp; Interpolation Methodology
+      </h2>
+      <p>
+        <strong>1. Data Source (NASA Physical Sciences Informatics — PSI):</strong>
+        FlameSim is driven by experimental microgravity combustion records from NASA campaigns including
+        <em>Saffire I–VI</em>, <em>SoFIE (Solid Fuel Ignition and Extinction)</em>, <em>BASS (Burning and Suppression of Solids)</em>,
+        <em>FLEX / Cool Flames Investigation</em>, and <em>SAME (Smoke Aerosol Measurement Experiment)</em>.
+      </p>
+      <p>
+        <strong>2. Prediction &amp; Interpolation Method (<code>predict.py</code>):</strong>
+        Inputs are normalized across a 5-dimensional space (O₂ mole fraction, log-scaled ventilation velocity, sample thickness, cabin pressure, and gravity level).
+        Each numeric output is predicted independently using <strong>k-Nearest Neighbors Inverse-Distance-Weighted (IDW) interpolation</strong> ($k=3\text{–}4$) over only those experimental rows that report that specific output.
+        Categorical outputs (combustion regime, optimal sensor, mitigation) use distance-weighted majority voting.
+      </p>
+      <p>
+        <strong>3. Physically-Inspired Heuristic Fallback &amp; Model Limits:</strong>
+        When an output column is completely unreported for a material, or when the user selects <em>Custom Material</em>, FlameSim falls back to an analytical microgravity combustion correlation (accounting for limiting oxygen index $\text{LOI}$, radiative quenching at $0\text{ cm/s}$, cool-flame transition around $\sim 600\text{ K}$, and high-velocity Damköhler blow-off) and explicitly tags the output as <code>heuristic (low confidence)</code>.
+      </p>
+      <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/40 text-xs font-mono text-amber-200">
+        <strong>PRELIMINARY ENGINEERING DISCLAIMER:</strong> Data-driven model v1 (interpolation on PSI/NASA experiments). Preliminary decision-support tool developed for the NASA Space Apps Challenge 2026 ("Flame in Freefall"). Not certified for operational spacecraft flight readiness decisions.
+      </div>
+    </div>
+  </main>
+
+  
+
+
+<script type="module" src="./js/app.js"></script><script src="./presentation.js"></script></body></html>

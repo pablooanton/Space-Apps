@@ -1,0 +1,119 @@
+/* ============================================================================
+   FLAMESIM AEROSPACE TELEMETRY UI — DEEP SPACE GLASSMORPHISM & HUD SYSTEM
+   Inspired by SpaceX Dragon Crew Displays, NASA GRC & Blue Origin Mission Control
+   ============================================================================ */
+
+:root {
+  --bg-void: #03060c;
+  --bg-panel: rgba(10, 17, 32, 0.82);
+  --bg-subpanel: rgba(5, 9, 18, 0.88);
+  --border-hud: rgba(56, 189, 248, 0.18);
+  --border-hud-bright: rgba(56, 189, 248, 0.45);
+  --cyan-glow: rgba(34, 211, 238, 0.25);
+  --flame-glow: rgba(249, 115, 22, 0.28);
+}
+
+body {
+  background-color: var(--bg-void);
+  background-image:
+    radial-gradient(circle at 15% 10%, rgba(14, 116, 144, 0.14) 0%, transparent 45%),
+    radial-gradient(circle at 85% 15%, rgba(234, 88, 12, 0.10) 0%, transparent 40%),
+    linear-gradient(rgba(30, 41, 59, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 41, 59, 0.18) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+}
+
+/* Aerospace HUD Panel with subtle corner brackets & glassmorphism */
+.hud-panel {
+  position: relative;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(51, 65, 85, 0.65);
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.hud-panel:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.hud-subcard {
+  background: var(--bg-subpanel);
+  border: 1px solid rgba(30, 41, 59, 0.9);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
+}
+
+/* Corner reticle accents on main mission cards */
+.hud-reticle::before,
+.hud-reticle::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  border-color: rgba(34, 211, 238, 0.55);
+}
+
+.hud-reticle::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid rgba(34, 211, 238, 0.65);
+  border-left: 2px solid rgba(34, 211, 238, 0.65);
+  border-top-left-radius: 6px;
+}
+
+.hud-reticle::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid rgba(34, 211, 238, 0.65);
+  border-right: 2px solid rgba(34, 211, 238, 0.65);
+  border-bottom-right-radius: 6px;
+}
+
+/* Custom Precision Range Sliders */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid #334155;
+  border-radius: 999px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #22d3ee;
+  border: 2px solid #083344;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.18);
+  background: #67e8f9;
+}
+
+@keyframes pulse-telemetry {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.92); }
+}
+
+.telemetry-dot {
+  animation: pulse-telemetry 2s infinite ease-in-out;
+}
+
+.custom-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.25);
+  border-radius: 3px;
+}
