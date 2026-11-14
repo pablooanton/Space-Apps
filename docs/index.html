@@ -3257,6 +3257,7 @@ MAPTIS-NOMEX-ISS,NASA-STD-6001B-T1,nomex,21.0,10.0,1.500,101.3,CONCURRENT,0.0000
     Array.from(selMat.options).forEach((opt) => {
       if (t.inputs.materials[opt.value]) opt.textContent = t.inputs.materials[opt.value];
     });
+    syncMaterialOptions();
     document.getElementById("lbl-block1-title").textContent = t.cards.block1Title;
     setLabelAndTip("lbl-spread-rate", t.cards.spreadRate, t.cards.spreadRateTooltip);
     setLabelAndTip("lbl-regime", t.cards.regime, t.cards.regimeTooltip);
