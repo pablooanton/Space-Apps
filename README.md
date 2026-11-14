@@ -2,6 +2,21 @@
 
 Spacecraft fire safety prototype with a React dashboard and FastAPI simulation API. The bundled six records came from the request and are **unverified demo data**. The model and charts are preliminary and are not certified for flight decisions.
 
+## Ver la web sin instalar nada
+
+Descarga [docs/index.html](docs/index.html) con el botón de descarga de GitHub y abre el archivo con Chrome, Edge o Firefox. Contiene la interfaz, gráficos, datos y motor de demostración en un solo HTML; no necesita servidor ni conexión. El modo se identifica como **LOCAL DEMO** y conserva las 31 columnas de Supabase. Las cargas de CSV permanecen en memoria durante esa sesión.
+
+Para publicar una dirección web desde este repositorio: abre **Settings → Pages → Build and deployment**, selecciona **Deploy from a branch**, rama **main**, carpeta **/docs**, y guarda. Tras completarse el despliegue de Pages, la dirección prevista es `https://pablooanton.github.io/Space-Apps/`. Subir código a GitHub no activa Pages por sí solo. La activación y la dirección pública todavía requieren confirmación en GitHub.
+
+## Demostración con un solo comando
+
+```bash
+npm ci
+npm run demo
+```
+
+Para regenerar el archivo autónomo después de cambios: `npm run build:standalone`. El resultado es `dist/index.html`; copia ese archivo a `docs/index.html` para actualizar Pages. Los datos se generan desde el CSV original durante esa compilación.
+
 ## Run locally
 
 Requires Node.js 20+ and Python 3.10+.
