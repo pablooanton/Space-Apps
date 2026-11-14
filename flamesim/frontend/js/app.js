@@ -612,6 +612,7 @@ function applyLanguage() {
   Array.from(selMat.options).forEach(opt => {
     if (t.inputs.materials[opt.value]) opt.textContent = t.inputs.materials[opt.value];
   });
+  syncMaterialOptions();
 
   // Cards headers & tooltips
   document.getElementById("lbl-block1-title").textContent = t.cards.block1Title;
