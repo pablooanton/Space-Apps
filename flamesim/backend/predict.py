@@ -130,6 +130,10 @@ class DatasetStore:
         self.warnings: List[Dict[str, Any]] = []
         self.missing_columns: List[str] = []
         self.unexpected_columns: List[str] = []
+        self.source: str = "sample"
+        self.source_row_count: int = 0
+        self.excluded_row_count: int = 0
+        self.sanitized_cell_count: int = 0
 
     def load_csv_text(self, csv_text: str, is_sample: bool = False) -> Dict[str, Any]:
         reader = csv.DictReader(io.StringIO(csv_text.strip()))
@@ -210,6 +214,10 @@ class DatasetStore:
             parsed_rows.append(row)
 
         self.rows = parsed_rows
+        self.source = "sample" if is_sample else "uploaded_csv"
+        self.source_row_count = len(parsed_rows)
+        self.excluded_row_count = 0
+        self.sanitized_cell_count = 0
         self.is_sample_data = is_sample or any(
             "SAMPLE" in str(r.get("data_quality_flag", "")).upper() for r in parsed_rows
         )
@@ -218,6 +226,10 @@ class DatasetStore:
     def summary(self) -> Dict[str, Any]:
         return {
             "row_count": len(self.rows),
+            "dataset_source": self.source,
+            "source_row_count": self.source_row_count,
+            "excluded_row_count": self.excluded_row_count,
+            "sanitized_cell_count": self.sanitized_cell_count,
             "is_sample_data": self.is_sample_data,
             "missing_columns": self.missing_columns,
             "unexpected_columns": self.unexpected_columns,
@@ -583,9 +595,19 @@ def predict(inputs: Dict[str, Any], _skip_1g_comparison: bool = False) -> Dict[s
             "verdict_code": verdict_code,
         }
 
+    # The import has not been independently verified for safety use.
+    if STORE.source == "supabase":
+        for output in outputs.values():
+            output["confidence"] = "low"
+
     return {
         "inputs": inputs,
         "is_sample_data": STORE.is_sample_data,
+        "dataset_source": STORE.source,
+        "dataset_warning": (
+            "Supabase records are an unverified import; do not use for safety decisions."
+            if STORE.source == "supabase" else None
+        ),
         "outputs": outputs,
         "comparison_1g_vs_ug": comparison_1g,
         "nearest_experiments": nearest_3,
@@ -602,3 +624,4 @@ def predict(inputs: Dict[str, Any], _skip_1g_comparison: bool = False) -> Dict[s
             if r.get("in_o2_molar_fraction_pct") is not None and r.get("in_ventilation_flow_cm_s") is not None
         ],
     }
+
