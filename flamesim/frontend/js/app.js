@@ -111,6 +111,12 @@ function setEngineBadge(online) {
   }
 }
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[char]);
+}
+
 function syncMaterialOptions() {
   const select = document.getElementById("sel-material");
   if (!select) return;
@@ -193,7 +199,7 @@ function formatMetaBadge(outObj) {
   const cls = SOURCE_BADGE_STYLES[outObj.source] || SOURCE_BADGE_STYLES.heuristic;
   const recs = (outObj.records_used || []).map(r => `${r.record_id} (${r.document_id})`).join(", ");
   const tip = recs ? `Used: ${recs}` : "Physics heuristic correlation";
-  return `<span title="${tip}" class="px-1.5 py-0.5 rounded border text-[9px] font-mono cursor-help ${cls}">${srcLabel} · ${confLabel}</span>`;
+  return `<span title="${escapeHtml(tip)}" class="px-1.5 py-0.5 rounded border text-[9px] font-mono cursor-help ${cls}">${escapeHtml(srcLabel)} · ${escapeHtml(confLabel)}</span>`;
 }
 
 function renderDashboardOutputs(pred) {
@@ -203,7 +209,20 @@ function renderDashboardOutputs(pred) {
   // Sample banner visibility
   const sampleBanner = document.getElementById("sample-warning-banner");
   if (sampleBanner) {
-    sampleBanner.classList.toggle("hidden", !pred.is_sample_data);
+    const isSupabase = pred.dataset_source === "supabase";
+    sampleBanner.classList.toggle("hidden", !pred.is_sample_data && !isSupabase);
+    if (isSupabase) {
+      sampleBanner.querySelector("span").textContent = "TELEMETRY MODE: SUPABASE";
+      document.getElementById("txt-sample-warning-title").textContent = "SUPABASE IMPORT — UNVERIFIED FOR SAFETY USE";
+      document.getElementById("txt-sample-warning-desc").textContent =
+        `${datasetSummary.excluded_row_count || 0} source rows excluded for invalid inputs. Review data quality in the Data tab.`;
+      sampleBanner.querySelector("button").textContent = "View data quality →";
+    } else if (pred.is_sample_data) {
+      sampleBanner.querySelector("span").textContent = "TELEMETRY MODE: SAMPLE CSV";
+      document.getElementById("txt-sample-warning-title").textContent = "SAMPLE DATA — NOT REAL FLIGHT CERTIFICATION EXPERIMENTS";
+      document.getElementById("txt-sample-warning-desc").textContent = "Running on the bundled sample dataset.";
+      sampleBanner.querySelector("button").textContent = "View dataset →";
+    }
   }
 
   // Update Executive Telemetry Summary Ribbon
@@ -373,7 +392,7 @@ function renderDashboardOutputs(pred) {
   document.getElementById("badge-meta-mitigation").innerHTML = formatMetaBadge(out.out_recommended_mitigation);
   const steps = mitStr.split(/;|\n/).map(s => s.trim()).filter(Boolean);
   document.getElementById("list-mitigation-checklist").innerHTML = steps
-    .map(s => `<label class="flex items-start gap-2 cursor-pointer"><input type="checkbox" checked class="mt-0.5 accent-cyan-400" /><span>${s}</span></label>`)
+    .map(s => `<label class="flex items-start gap-2 cursor-pointer"><input type="checkbox" checked class="mt-0.5 accent-cyan-400" /><span>${escapeHtml(s)}</span></label>`)
     .join("");
 
   // Nearest 3 Experiments Panel (Interactive Click-to-Select with Similarity % Badge)
@@ -389,22 +408,22 @@ function renderDashboardOutputs(pred) {
           ? "border-emerald-400 bg-emerald-950/40 shadow-lg shadow-emerald-500/10"
           : "border-slate-800 bg-slate-950/90 hover:border-cyan-400";
         return `
-          <div onclick="window.selectMatchedExperiment('${n.record_id}', ${simPct})"
+          <div data-record-id="${encodeURIComponent(n.record_id)}" onclick="window.selectMatchedExperiment(decodeURIComponent(this.dataset.recordId), ${simPct})"
                class="p-2.5 rounded-xl border ${borderCls} flex flex-col gap-1 cursor-pointer transition group">
             <div class="flex justify-between items-center">
               <div class="flex items-center gap-1.5">
                 <span class="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-bold">#${idx + 1}</span>
-                <span class="font-bold text-amber-300 group-hover:text-white transition">${n.record_id}</span>
+                <span class="font-bold text-amber-300 group-hover:text-white transition">${escapeHtml(n.record_id)}</span>
               </div>
               <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${simPct >= 85 ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40" : "bg-cyan-500/20 text-cyan-300"}">
                 ${simPct}% Match
               </span>
             </div>
             <div class="text-[10px] text-slate-400">
-              Doc: ${n.document_id} · O₂: ${n.in_o2_molar_fraction_pct}% · Flow: ${n.in_ventilation_flow_cm_s} cm/s
+              Doc: ${escapeHtml(n.document_id)} · O₂: ${n.in_o2_molar_fraction_pct}% · Flow: ${n.in_ventilation_flow_cm_s} cm/s
             </div>
             <div class="flex justify-between items-center text-[10px] text-slate-300 pt-0.5 border-t border-slate-800/80">
-              <span>V_f: <strong>${n.out_flame_spread_rate_mm_s ?? "N/A"} mm/s</strong> · ${n.out_combustion_regime ?? "N/A"}</span>
+              <span>V_f: <strong>${n.out_flame_spread_rate_mm_s ?? "N/A"} mm/s</strong> · ${escapeHtml(n.out_combustion_regime ?? "N/A")}</span>
               <span class="text-cyan-400 font-bold group-hover:translate-x-0.5 transition">Inspect DB →</span>
             </div>
           </div>
@@ -797,7 +816,7 @@ function renderDataPageWarnings() {
       Dataset Validation &amp; Missing-Cell Log (${wList.length} notices — empty cells safely treated as missing, never 0):
     </div>
     <div class="max-h-32 overflow-y-auto space-y-1 text-[11px] font-mono text-slate-300 custom-scroll">
-      ${wList.map(w => `<div><span class="text-amber-400">[Row ${w.row} · ${w.record_id}]</span> ${w.type}: ${w.message}</div>`).join("")}
+      ${wList.map(w => `<div><span class="text-amber-400">[Row ${escapeHtml(w.row)} · ${escapeHtml(w.record_id)}]</span> ${escapeHtml(w.type)}: ${escapeHtml(w.message)}</div>`).join("")}
     </div>
   `;
 }
@@ -821,9 +840,9 @@ window.renderDataPageTable = function () {
   document.getElementById("tbody-dataset-rows").innerHTML = rows
     .map(r => `
       <tr class="hover:bg-slate-900/80">
-        <td class="p-2.5 font-bold text-amber-300">${r.record_id}</td>
-        <td class="p-2.5 text-slate-400">${r.document_id}</td>
-        <td class="p-2.5 font-bold text-cyan-300">${r.material_id}</td>
+        <td class="p-2.5 font-bold text-amber-300">${escapeHtml(r.record_id)}</td>
+        <td class="p-2.5 text-slate-400">${escapeHtml(r.document_id)}</td>
+        <td class="p-2.5 font-bold text-cyan-300">${escapeHtml(r.material_id)}</td>
         <td class="p-2.5">${r.in_o2_molar_fraction_pct ?? "—"}</td>
         <td class="p-2.5">${r.in_ventilation_flow_cm_s ?? "—"}</td>
         <td class="p-2.5">${r.in_material_thickness_mm ?? "—"}</td>
@@ -839,7 +858,7 @@ window.renderDataPageTable = function () {
         <td class="p-2.5 text-slate-400">${r.out_acid_gas_hcl_ppm ?? "—"} | ${r.out_acid_gas_hf_ppm ?? "—"} | ${r.out_acid_gas_hcn_ppm ?? "—"}</td>
         <td class="p-2.5">${r.out_mean_particle_diameter_um ?? "—"}</td>
         <td class="p-2.5">
-          <button onclick="window.loadExperimentIntoSimulator('${r.record_id}')" class="px-2 py-0.5 rounded bg-blue-600/30 border border-blue-500/40 text-blue-300 hover:bg-blue-600/50">
+          <button data-record-id="${encodeURIComponent(r.record_id)}" onclick="window.loadExperimentIntoSimulator(decodeURIComponent(this.dataset.recordId))" class="px-2 py-0.5 rounded bg-blue-600/30 border border-blue-500/40 text-blue-300 hover:bg-blue-600/50">
             Load →
           </button>
         </td>
@@ -914,7 +933,7 @@ function renderSelectedExperimentBanner() {
   document.getElementById("sel-exp-banner-id").textContent = row.record_id;
   document.getElementById("sel-exp-banner-doc").textContent = row.document_id;
   document.getElementById("sel-exp-banner-match").textContent = `${activeMatchPct}% Similarity Match`;
-  document.getElementById("sel-exp-banner-notes").textContent = row.extraction_notes || "Official NASA PSI experimental record loaded from database.";
+  document.getElementById("sel-exp-banner-notes").textContent = row.extraction_notes || "Unverified imported experiment record.";
 
   const cells = [
     { label: "DB Spread V_f", val: row.out_flame_spread_rate_mm_s !== null ? `${row.out_flame_spread_rate_mm_s} mm/s` : "Not reported" },
@@ -931,7 +950,7 @@ function renderSelectedExperimentBanner() {
     .map(c => `
       <div class="p-2 rounded-lg bg-slate-950/90 border border-emerald-500/30 flex flex-col">
         <span class="text-[9px] uppercase text-emerald-400">${c.label}</span>
-        <span class="font-bold text-white truncate">${c.val}</span>
+        <span class="font-bold text-white truncate">${escapeHtml(c.val)}</span>
       </div>
     `)
     .join("");
