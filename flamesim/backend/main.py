@@ -45,7 +45,7 @@ app.add_middleware(
 
 
 class SimulationInputs(BaseModel):
-    material_id: str = Field(default="cotton", description="cotton | pmma | pvc | nomex | custom")
+    material_id: str = Field(default="cotton", description="Material ID from /api/dataset, or custom for heuristic mode")
     in_o2_molar_fraction_pct: float = Field(default=21.0, ge=15.0, le=50.0)
     in_ventilation_flow_cm_s: float = Field(default=12.0, ge=0.0, le=50.0)
     in_material_thickness_mm: float = Field(default=1.5, ge=0.05, le=10.0)
