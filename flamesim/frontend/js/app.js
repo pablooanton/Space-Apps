@@ -16,7 +16,7 @@ import { predictLocal } from "./predictor-client.js";
 import { FlameCanvasRenderer } from "./canvas-renderer.js";
 import { EngineeringChartsSuite } from "./charts-four.js";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = window.FLAMESIM_API_BASE || "http://localhost:8000";
 const COMPARE_STORAGE_KEY = "flamesim_compare_scenarios_v1";
 
 let currentLang = "en";
@@ -28,6 +28,7 @@ let flameRenderer = null;
 let chartsSuite = null;
 let activeSelectedRecordId = null;
 let activeMatchPct = 100;
+let forceLocalEngine = false;
 
 const uiInputs = {
   material_id: "pmma",
@@ -82,12 +83,15 @@ async function initFlameSim() {
     const res = await fetch(`${API_BASE}/api/dataset`);
     if (res.ok) {
       datasetSummary = await res.json();
+      syncMaterialOptions();
       setEngineBadge(true);
     }
   } catch {
     setEngineBadge(false);
   }
 
+  syncMaterialOptions();
+  document.getElementById("nav-row-count").textContent = datasetSummary.row_count;
   applyLanguage();
   updateCompareCountBadge();
   renderDataPageWarnings();
@@ -100,11 +104,35 @@ function setEngineBadge(online) {
   if (!el) return;
   if (online) {
     el.className = "text-[10px] font-mono px-2 py-1 rounded border border-emerald-500/40 bg-emerald-500/15 text-emerald-300";
-    el.textContent = "FASTAPI: CONNECTED";
+    el.textContent = datasetSummary.dataset_source === "supabase" ? "SUPABASE: CONNECTED" : "FASTAPI: CONNECTED";
   } else {
     el.className = "text-[10px] font-mono px-2 py-1 rounded border border-cyan-500/40 bg-cyan-500/15 text-cyan-300";
     el.textContent = "ENGINE: CLIENT k-NN";
   }
+}
+
+function syncMaterialOptions() {
+  const select = document.getElementById("sel-material");
+  if (!select) return;
+  for (const option of [...select.options]) {
+    if (option.dataset.dynamicMaterial) option.remove();
+  }
+  const counts = new Map();
+  for (const row of datasetSummary.rows || []) {
+    if (row.material_id) counts.set(row.material_id, (counts.get(row.material_id) || 0) + 1);
+  }
+  for (const option of [...select.options]) {
+    if (option.value === "custom") continue;
+    const label = option.value.replaceAll("_", " ").toUpperCase();
+    option.textContent = `${label} (${counts.get(option.value) || 0} rows)`;
+  }
+  for (const [id, count] of [...counts].sort(([a], [b]) => a.localeCompare(b))) {
+    if ([...select.options].some(option => option.value === id)) continue;
+    const option = new Option(`${id.replaceAll("_", " ").toUpperCase()} (${count} rows)`, id);
+    option.dataset.dynamicMaterial = "true";
+    select.add(option);
+  }
+  select.value = uiInputs.material_id;
 }
 
 function bindRangeAndNumber(rngId, numId, stateKey) {
@@ -131,13 +159,14 @@ function scheduleSimulation() {
 
 async function executeSimulationImmediate() {
   let pred = null;
+  if (forceLocalEngine) setEngineBadge(false);
   try {
-    const res = await fetch(`${API_BASE}/api/simulate`, {
+    const res = forceLocalEngine ? null : await fetch(`${API_BASE}/api/simulate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(uiInputs)
     });
-    if (res.ok) {
+    if (res?.ok) {
       pred = await res.json();
       setEngineBadge(true);
     }
@@ -717,13 +746,17 @@ window.handleCsvFileUpload = async function (event) {
     const res = await fetch(`${API_BASE}/api/dataset`, { method: "POST", body: formData });
     if (res.ok) {
       datasetSummary = await res.json();
+      forceLocalEngine = false;
     } else {
       datasetSummary = parseCsvDataset(text, false);
+      forceLocalEngine = true;
     }
   } catch {
     datasetSummary = parseCsvDataset(text, false);
+    forceLocalEngine = true;
   }
 
+  syncMaterialOptions();
   document.getElementById("nav-row-count").textContent = datasetSummary.row_count;
   renderDataPageWarnings();
   renderDataPageTable();
@@ -734,11 +767,18 @@ window.resetToSampleDataset = async function () {
   currentCsvRaw = SEEDED_SAMPLE_CSV;
   try {
     const res = await fetch(`${API_BASE}/api/dataset/reset`, { method: "POST" });
-    if (res.ok) datasetSummary = await res.json();
-    else datasetSummary = parseCsvDataset(SEEDED_SAMPLE_CSV, true);
+    if (res.ok) {
+      datasetSummary = await res.json();
+      forceLocalEngine = false;
+    } else {
+      datasetSummary = parseCsvDataset(SEEDED_SAMPLE_CSV, true);
+      forceLocalEngine = true;
+    }
   } catch {
     datasetSummary = parseCsvDataset(SEEDED_SAMPLE_CSV, true);
+    forceLocalEngine = true;
   }
+  syncMaterialOptions();
   document.getElementById("nav-row-count").textContent = datasetSummary.row_count;
   renderDataPageWarnings();
   renderDataPageTable();
@@ -1094,7 +1134,11 @@ window.exportPdfReport = function () {
     "NASA Space Apps Challenge 2026 ('Flame in Freefall')",
     "----------------------------------------------------------------------",
     `MODEL BADGE: ${t.modelBadge}`,
-    lastPrediction.is_sample_data ? "DATASET STATUS: SAMPLE DATA (NOT REAL FLIGHT CERTIFICATION EXPERIMENTS)" : "DATASET STATUS: USER EXPERIMENTAL DATASET",
+    lastPrediction.dataset_source === "supabase"
+      ? "DATASET STATUS: SUPABASE IMPORT (UNVERIFIED; NOT FOR SAFETY DECISIONS)"
+      : lastPrediction.is_sample_data
+        ? "DATASET STATUS: SAMPLE DATA (NOT REAL FLIGHT CERTIFICATION EXPERIMENTS)"
+        : "DATASET STATUS: USER EXPERIMENTAL DATASET",
     "----------------------------------------------------------------------",
     "INPUT PARAMETERS:",
     `  1. Material ID           : ${uiInputs.material_id.toUpperCase()}`,
@@ -1183,3 +1227,4 @@ window.addEventListener("DOMContentLoaded", () => {
     chartsSuite?.renderAll();
   }).observe(frame);
 });
+
