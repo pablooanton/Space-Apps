@@ -10,7 +10,8 @@ Endpoints:
 - POST /api/sweep          -> Runs a 1D parameter sweep over a chosen input variable
 """
 
-from pathlib import Path
+import os
+from contextlib import asynccontextmanager
 from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -18,17 +19,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from predict import SAMPLE_CSV_PATH, STORE, predict
+from supabase_source import load_store_from_supabase
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if os.getenv("FLAMESIM_OFFLINE_SAMPLE") != "1":
+        load_store_from_supabase(STORE)
+    yield
 
 app = FastAPI(
     title="FlameSim: Spacecraft Fire Safety Simulator API",
     version="1.0.0",
     description="Data-driven interpolation and heuristic engine over NASA PSI microgravity combustion experiments.",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -64,6 +74,10 @@ def health_check() -> Dict[str, Any]:
         "model": "Data-driven model v1 (interpolation on PSI/NASA experiments)",
         "loaded_rows": len(STORE.rows),
         "is_sample_data": STORE.is_sample_data,
+        "dataset_source": STORE.source,
+        "source_row_count": STORE.source_row_count,
+        "excluded_row_count": STORE.excluded_row_count,
+        "sanitized_cell_count": STORE.sanitized_cell_count,
     }
 
 
@@ -79,6 +93,8 @@ def get_dataset_endpoint() -> Dict[str, Any]:
 
 @app.post("/api/dataset")
 async def upload_dataset_endpoint(file: Optional[UploadFile] = File(default=None), raw: Optional[RawCsvUpload] = None) -> Dict[str, Any]:
+    if STORE.source == "supabase":
+        raise HTTPException(status_code=403, detail="Shared Supabase dataset is read-only.")
     if file is not None:
         content_bytes = await file.read()
         try:
@@ -94,6 +110,8 @@ async def upload_dataset_endpoint(file: Optional[UploadFile] = File(default=None
 
 @app.post("/api/dataset/reset")
 def reset_dataset_endpoint() -> Dict[str, Any]:
+    if STORE.source == "supabase":
+        raise HTTPException(status_code=403, detail="Shared Supabase dataset is read-only.")
     if not SAMPLE_CSV_PATH.exists():
         raise HTTPException(status_code=404, detail="Sample CSV file not found on disk.")
     return STORE.load_csv_text(SAMPLE_CSV_PATH.read_text(encoding="utf-8"), is_sample=True)
@@ -124,3 +142,4 @@ def parameter_sweep_endpoint(req: SweepRequest) -> Dict[str, Any]:
             "regime": pred["out_combustion_regime"]["value"],
         })
     return {"sweep_param": req.sweep_param, "series": series}
+
