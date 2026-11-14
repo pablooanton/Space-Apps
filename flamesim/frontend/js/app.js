@@ -1168,3 +1168,18 @@ function generateMinimalPdf(lines) {
 }
 
 window.addEventListener("DOMContentLoaded", initFlameSim);
+
+// Redraw existing results when their viewport changes; prediction values are reused.
+window.addEventListener("DOMContentLoaded", () => {
+  const frame = document.getElementById("flammabilityMapCanvas")?.parentElement;
+  if (!frame) return;
+  new ResizeObserver(() => {
+    if (!lastPrediction || frame.clientWidth === 0) return;
+    drawFlammabilityMap(
+      lastPrediction.material_experimental_points || [],
+      uiInputs,
+      lastPrediction.outputs.out_combustion_regime.value
+    );
+    chartsSuite?.renderAll();
+  }).observe(frame);
+});

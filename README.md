@@ -2,7 +2,7 @@
 
 La interfaz actual publicada en `docs/index.html` es el rediseño de la segunda aplicación aportada en el ZIP. Sus fuentes completas están en `flamesim/`. Abre `docs/index.html` directamente o ejecuta `npm run preview:refined`. Para regenerar el HTML autónomo, ejecuta `npm run build:refined`.
 
-El rediseño modifica la presentación y la jerarquía visual. Los 18 archivos originales de JavaScript funcional, backend y base de datos se conservan sin cambios. `flamesim/frontend/presentation.js` solo adapta títulos y textos de presentación al idioma seleccionado. Las instrucciones inferiores describen también la primera versión React, conservada en el repositorio.
+La presentación conserva la paleta oscura original y utiliza todo el ancho de la pantalla, con gráficos en una sección independiente a ancho completo. Se conservan los motores de cálculo, el backend, los datos y las acciones originales. El controlador incorpora un redibujado de gráficos al cambiar el tamaño de su contenedor. `flamesim/frontend/presentation.js` solo adapta títulos y textos de presentación al idioma seleccionado. Las instrucciones inferiores describen también la primera versión React, conservada en el repositorio.
 
 Spacecraft fire safety prototype with a React dashboard and FastAPI simulation API. The bundled six records came from the request and are **unverified demo data**. The model and charts are preliminary and are not certified for flight decisions.
 

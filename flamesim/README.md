@@ -1,6 +1,6 @@
 # FlameSim · Interfaz refinada
 
-Esta carpeta contiene la segunda aplicación aportada por el usuario, con una nueva capa de diseño. El cálculo, las acciones, los datos y sus contratos se conservan.
+Esta carpeta contiene la segunda aplicación aportada por el usuario, con su paleta oscura original y una distribución que aprovecha todo el ancho de la pantalla. Los cuatro gráficos ocupan una sección independiente a ancho completo y se redibujan al cambiar el tamaño de la ventana. El cálculo, las acciones, los datos y sus contratos se conservan.
 
 - Abre `FlameSim.html` de la entrega para utilizar la versión autónoma sin instalar nada.
 - Para servir el código modular: `python3 -m http.server 4174 --directory frontend` y abre el puerto 4174 en tu navegador.
